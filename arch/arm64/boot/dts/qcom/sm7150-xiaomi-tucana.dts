@@ -138,6 +138,10 @@
 	enable-gpios = <&tlmm 67 GPIO_ACTIVE_HIGH>;
 };
 
+&panel {
+	compatible = "xiaomi,f4-41-06-0a";
+};
+
 &pm6150_gpios {
 	gpio-line-names = "FOD_LDO_EN1", /* GPIO_1 */
 			  "FOD_LDO_EN2",
