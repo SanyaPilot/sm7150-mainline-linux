@@ -3654,6 +3654,13 @@ static int fts_enable_reg(struct fts_ts_info *info, bool enable)
 	}
 
 	if (info->avdd_reg) {
+		// Set required voltage first
+		retval = regulator_set_voltage(info->avdd_reg, 3000000, 3000000);
+		if (retval < 0) {
+			logError(1, "%s %s Failed to set avdd reg voltage!\n",
+				tag, __func__);
+			goto disable_bus_reg;
+		}
 		retval = regulator_enable(info->avdd_reg);
 		if (retval < 0) {
 			logError(1, "%s %s: Failed to enable power regulator\n",
