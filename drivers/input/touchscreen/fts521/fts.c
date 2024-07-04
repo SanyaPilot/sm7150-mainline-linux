@@ -51,11 +51,7 @@
 #include <linux/regulator/consumer.h>
 #include <linux/notifier.h>
 #include <linux/fb.h>
-
-#ifdef KERNEL_ABOVE_2_6_38
 #include <linux/input/mt.h>
-#endif
-
 
 #include "fts.h"
 #include "fts_lib/ftsCompensation.h"
@@ -79,12 +75,7 @@
 #define install_handler(_i, _evt, _hnd) \
 		(_i->event_dispatch_table[event_id(_evt)] = handler_name(_hnd))
 
-
-
-#ifdef KERNEL_ABOVE_2_6_38
 #define TYPE_B_PROTOCOL
-#endif
-
 
 extern SysInfo systemInfo;
 extern TestToDo tests;
@@ -2739,7 +2730,7 @@ static void fts_event_handler(struct work_struct *work)
 
 	info = container_of(work, struct fts_ts_info, work);
 
-	__pm_wakeup_event(&info->wakesrc, jiffies_to_msecs(HZ));
+	pm_wakeup_event(info->dev, jiffies_to_msecs(HZ));
 
 	/* read the FIFO and parsing events */
 
@@ -3521,7 +3512,7 @@ static void fts_resume_work(struct work_struct *work)
 
 	info = container_of(work, struct fts_ts_info, resume_work);
 
-	__pm_wakeup_event(&info->wakesrc, jiffies_to_msecs(HZ));
+	pm_wakeup_event(info->dev, jiffies_to_msecs(HZ));
 
 	info->resume_bit = 1;
 
@@ -3546,7 +3537,7 @@ static void fts_suspend_work(struct work_struct *work)
 
 	info = container_of(work, struct fts_ts_info, suspend_work);
 
-	__pm_wakeup_event(&info->wakesrc, jiffies_to_msecs(HZ));
+	pm_wakeup_event(info->dev, jiffies_to_msecs(HZ));
 
 	info->resume_bit = 0;
 
@@ -3867,7 +3858,7 @@ static int parse_dt(struct device *dev, struct fts_hw_platform_data *bdata)
   *the linux input subsystem etc.
   */
 #ifdef I2C_INTERFACE
-static int fts_probe(struct i2c_client *client, const struct i2c_device_id *idp)
+static int fts_probe(struct i2c_client *client)
 {
 #else
 static int fts_probe(struct spi_device *client)
@@ -3969,7 +3960,7 @@ static int fts_probe(struct spi_device *client)
 	info->client->irq = gpio_to_irq(info->board->irq_gpio);
 
 	logError(1, "%s SET Event Handler:\n", tag);
-	wakeup_source_init(&info->wakesrc, "fts_tp");
+	device_init_wakeup(&client->dev, 1);
 	info->event_wq = alloc_workqueue("fts-event-queue", WQ_UNBOUND |
 					 WQ_HIGHPRI | WQ_CPU_INTENSIVE, 1);
 	if (!info->event_wq) {
@@ -4174,9 +4165,6 @@ ProbeErrorExit_5:
 	destroy_workqueue(info->event_wq);
 
 ProbeErrorExit_4:
-	/* destroy_workqueue(info->fwu_workqueue); */
-	wakeup_source_trash(&info->wakesrc);
-
 	fts_enable_reg(info, false);
 
 ProbeErrorExit_2:
@@ -4197,10 +4185,10 @@ ProbeErrorExit_0:
   * This function is called when the driver need to be removed.
   */
 #ifdef I2C_INTERFACE
-static int fts_remove(struct i2c_client *client)
+static void fts_remove(struct i2c_client *client)
 {
 #else
-static int fts_remove(struct spi_device *client)
+static void fts_remove(struct spi_device *client)
 {
 #endif
 
@@ -4223,7 +4211,6 @@ static int fts_remove(struct spi_device *client)
 
 	/* Remove the work thread */
 	destroy_workqueue(info->event_wq);
-	wakeup_source_trash(&info->wakesrc);
 #ifndef FW_UPDATE_ON_PROBE
 	destroy_workqueue(info->fwu_workqueue);
 #endif
@@ -4233,8 +4220,6 @@ static int fts_remove(struct spi_device *client)
 
 	/* free all */
 	kfree(info);
-
-	return OK;
 }
 
 /**
@@ -4247,16 +4232,19 @@ static struct of_device_id fts_of_match_table[] = {
 	},
 	{},
 };
+MODULE_DEVICE_TABLE(of, fts_of_match_table);
 
 #ifdef I2C_INTERFACE
 static const struct i2c_device_id fts_device_id[] = {
 	{ FTS_TS_DRV_NAME, 0 },
 	{}
 };
+MODULE_DEVICE_TABLE(i2c, fts_device_id);
 
 static struct i2c_driver fts_i2c_driver = {
 	.driver			= {
 		.name		= FTS_TS_DRV_NAME,
+		.owner 		= THIS_MODULE,
 		.of_match_table = fts_of_match_table,
 	},
 	.probe			= fts_probe,
@@ -4301,5 +4289,5 @@ MODULE_DESCRIPTION("STMicroelectronics MultiTouch IC Driver");
 MODULE_AUTHOR("STMicroelectronics");
 MODULE_LICENSE("GPL");
 
-late_initcall(fts_driver_init);
+module_init(fts_driver_init);
 module_exit(fts_driver_exit);

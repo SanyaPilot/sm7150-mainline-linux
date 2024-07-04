@@ -45,7 +45,6 @@
 #include <linux/module.h>
 #include <linux/slab.h>
 #include <linux/string.h>
-#include <stdarg.h>
 #include <linux/serio.h>
 #include <linux/init.h>
 #include <linux/delay.h>
@@ -70,7 +69,7 @@ char *printHex(char *label, u8 *buff, int count, u8 *result)
 	int i, offset;
 
 	offset = strlen(label);
-	strlcpy(result, label, offset+1); /* +1 for terminator char */
+	strncpy(result, label, offset+1); /* +1 for terminator char */
 
 	for (i = 0; i < count; i++) {
 		snprintf(&result[offset], 4, "%02X ", buff[i]);
