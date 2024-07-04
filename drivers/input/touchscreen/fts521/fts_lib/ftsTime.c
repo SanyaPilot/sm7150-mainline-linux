@@ -35,7 +35,6 @@
 #include <linux/module.h>
 #include <linux/slab.h>
 #include <linux/string.h>
-#include <stdarg.h>
 #include <linux/time.h>
 #include <linux/delay.h>
 #include <linux/ctype.h>
@@ -47,7 +46,7 @@
   */
 void startStopWatch(StopWatch *w)
 {
-	w->start = current_kernel_time();
+	ktime_get_coarse_real_ts64(&w->start);
 }
 
 /**
@@ -56,7 +55,7 @@ void startStopWatch(StopWatch *w)
   */
 void stopStopWatch(StopWatch *w)
 {
-	w->end = current_kernel_time();
+	ktime_get_coarse_real_ts64(&w->end);
 }
 
 /**

@@ -320,7 +320,6 @@ struct fts_ts_info {
 					 * suspend/resume event */
 	bool sensor_sleep;	/* /< if true suspend was called while if false
 				 * resume was called */
-	struct wakeup_source wakesrc;	/* Wake Lock struct */
 
 	/* input lock */
 	struct mutex input_report_mutex; /* /< mutex for handling the report

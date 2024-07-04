@@ -682,7 +682,7 @@ static ssize_t fts_driver_test_write(struct file *file, const char __user *buf,
 	/*for(temp = 0; temp<count; temp++){
 	  *      logError(0,"%s p[%d] = %02X\n",tag, temp, p[temp]);
 	  * }*/
-	if (access_ok(VERIFY_READ, buf, count) < OK ||
+	if (access_ok(buf, count) < OK ||
 	    copy_from_user(pbuf, buf, count) != 0) {
 		res = ERROR_ALLOC;
 		goto END;
@@ -3023,15 +3023,15 @@ ERROR:
 /** @}*/
 
 /**
-  * file_operations struct which define the functions for the canonical
+  * proc_ops struct which define the functions for the canonical
   *operation on a device file node (open. read, write etc.)
   */
-static const struct file_operations fts_driver_test_ops = {
-	.open		= fts_open,
-	.read		= seq_read,
-	.write		= fts_driver_test_write,
-	.llseek		= seq_lseek,
-	.release	= seq_release
+static const struct proc_ops fts_driver_test_ops = {
+	.proc_open		= fts_open,
+	.proc_read		= seq_read,
+	.proc_write		= fts_driver_test_write,
+	.proc_lseek		= seq_lseek,
+	.proc_release	= seq_release
 };
 
 /*****************************************************************************/
