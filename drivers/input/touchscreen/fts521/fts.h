@@ -249,7 +249,6 @@ typedef void (*event_dispatch_handler_t)
   * - dev             Pointer to the structure device \n
   * - client          client structure \n
   * - input_dev       Input device structure \n
-  * - work            Work thread \n
   * - event_wq        Event queue for work thread \n
   * - event_dispatch_table  Event dispatch table handlers \n
   * - attrs           SysFS attributes \n
@@ -266,7 +265,6 @@ typedef void (*event_dispatch_handler_t)
   * - fwupdate_stat   Store the result of a fw update triggered by the host \n
   * - notifier        Used for be notified from a suspend/resume event \n
   * - sensor_sleep    true suspend was called, false resume was called \n
-  * - wakesrc         Wakeup Source struct \n
   * - input_report_mutex  mutex for handling the pressure of keys \n
   * - series_of_switches  to store the enabling status of a particular feature
   * from the host \n
@@ -280,7 +278,6 @@ struct fts_ts_info {
 #endif
 	struct input_dev         *input_dev;	/* /< Input device structure */
 
-	struct work_struct work;	/* /< Event work thread */
 	struct work_struct suspend_work;	/* /< Suspend work thread */
 	struct work_struct resume_work;	/* /< Resume work thread */
 	struct workqueue_struct  *event_wq;	/* /< Workqueue used for event
