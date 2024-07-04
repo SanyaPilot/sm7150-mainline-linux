@@ -57,14 +57,14 @@
 
 /* If both COMPUTE_INIT_METHOD and PRE_SAVED_METHOD are not defined,
  * driver will be automatically configured as GOLDEN_VALUE_METHOD */
-#define COMPUTE_INIT_METHOD /* Allow to compute init data on phone during
-								production */
+// #define COMPUTE_INIT_METHOD /* Allow to compute init data on phone during
+//								production */
 #ifndef COMPUTE_INIT_METHOD
 		#define PRE_SAVED_METHOD /* Pre-Saved Method used
 					  * during production */
 #endif
 
-#define FW_H_FILE  /* include the FW data as header file */
+//#define FW_H_FILE  /* include the FW data as header file */
 #ifdef FW_H_FILE
 	#define FW_SIZE_NAME	myArray_size	/* /< name of the variable in
 						 * the FW header file which
@@ -157,9 +157,9 @@
 
 
 /* **** PANEL SPECIFICATION **** */
-#define X_AXIS_MAX	1440	/* /< Max X coordinate of the display */
+#define X_AXIS_MAX	1080	/* /< Max X coordinate of the display */
 #define X_AXIS_MIN	0	/* /< min X coordinate of the display */
-#define Y_AXIS_MAX	2959	/* /< Max Y coordinate of the display */
+#define Y_AXIS_MAX	2340	/* /< Max Y coordinate of the display */
 #define Y_AXIS_MIN	0	/* /< min Y coordinate of the display */
 
 #define PRESSURE_MIN	0	/* /< min value of pressure reported */

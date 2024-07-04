@@ -36,7 +36,7 @@
 /* DIGITAL CHIP INFO */
 //#define ALIX
 //#define WALNUT
-#define SALIXP
+//#define SALIXP
 
 #ifdef ALIX
 #define DCHIP_ID_0			0x36	/* /< LSB chip ID for FTM5 */
@@ -68,7 +68,7 @@
 						  * max allowed value is 2kB */
 
 /* PROTOCOL INFO */
-//#define I2C_INTERFACE	 /*/< comment if the chip use SPI bus */
+#define I2C_INTERFACE	 /*/< comment if the chip use SPI bus */
 #ifdef I2C_INTERFACE
 #define I2C_SAD			0x49	/* /< slave address of the IC */
 #else
