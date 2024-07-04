@@ -70,6 +70,17 @@
 	};
 };
 
+&soc {
+	touch_vddio_vreg: fixedregulator@0 {
+		compatible = "regulator-fixed";
+		regulator-name = "disp_vddio_vreg";
+		startup-delay-us = <4000>;
+		enable-active-high;
+		regulator-boot-on;
+		gpio = <&tlmm 72 0>;
+	};
+};
+
 &framebuffer {
 	reg = <0x0 0x9c000000 0x0 (1080 * 2340 * 4)>;
 	height = <2340>;
@@ -94,6 +105,25 @@
 	status = "okay";
 
 	/* st,fts (touchscreen) @ 49 */
+	touchscreen: fts@49 {
+		compatible = "st,fts";
+		reg = <0x49>;
+		interrupt-parent = <&tlmm>;
+		interrupts = <9 0x2008>;
+		pinctrl-0 = <&ts_int_active &ts_reset_active>;
+		pinctrl-1 = <&ts_int_suspend &ts_reset_suspend>;
+		pinctrl-names = "pmx_ts_active", "pmx_ts_suspend";
+		vdd-supply = <&touch_vddio_vreg>;
+		avdd-supply = <&vreg_l6c_3p0>;
+		fts,regulator_dvdd = "vdd";
+		fts,regulator_avdd = "avdd";
+		fts,irq-gpio = <&tlmm 9 0x2008>;
+		fts,reset-gpio-enable;
+		fts,reset-gpio = <&tlmm 8 GPIO_ACTIVE_HIGH>;
+		fts,irq-flags = <0x2008>; /* IRQF_ONESHOT | IRQF_TRIGGER_LOW */
+		fts,x-max = <1080>;
+		fts,y-max = <2340>;
+	};
 	/* goodix,gt9886 (touchscreen) @ 5d */
 };
 
