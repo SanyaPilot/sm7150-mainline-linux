@@ -2083,11 +2083,11 @@ static void fts_enter_pointer_event_handler(struct fts_ts_info *info, unsigned
 	distance = 0;	/* if the tool is touching the display the distance
 			 * should be 0 */
 
-	if (x == X_AXIS_MAX)
-		x--;
+	if (x >= info->board->x_max)
+		x = info->board->x_max;
 
-	if (y == Y_AXIS_MAX)
-		y--;
+	if (y >= info->board->y_max)
+		y = info->board->y_max;
 
 	input_mt_slot(info->input_dev, touchId);
 	switch (touchType) {
@@ -3811,13 +3811,14 @@ static int parse_dt(struct device *dev, struct fts_hw_platform_data *bdata)
 	int retval;
 	const char *name;
 	struct device_node *np = dev->of_node;
+	u32 temp_val;
 
-	bdata->irq_gpio = of_get_named_gpio_flags(np, "st,irq-gpio", 0, NULL);
+	bdata->irq_gpio = of_get_named_gpio(np, "fts,irq-gpio", 0);
 
 	logError(0, "%s irq_gpio = %d\n", tag, bdata->irq_gpio);
 
 
-	retval = of_property_read_string(np, "st,regulator_dvdd", &name);
+	retval = of_property_read_string(np, "fts,regulator_dvdd", &name);
 	if (retval == -EINVAL)
 		bdata->vdd_reg_name = NULL;
 	else if (retval < 0)
@@ -3827,7 +3828,7 @@ static int parse_dt(struct device *dev, struct fts_hw_platform_data *bdata)
 		logError(0, "%s pwr_reg_name = %s\n", tag, name);
 	}
 
-	retval = of_property_read_string(np, "st,regulator_avdd", &name);
+	retval = of_property_read_string(np, "fts,regulator_avdd", &name);
 	if (retval == -EINVAL)
 		bdata->avdd_reg_name = NULL;
 	else if (retval < 0)
@@ -3837,13 +3838,29 @@ static int parse_dt(struct device *dev, struct fts_hw_platform_data *bdata)
 		logError(0, "%s bus_reg_name = %s\n", tag, name);
 	}
 
-	if (of_property_read_bool(np, "st,reset-gpio")) {
-		bdata->reset_gpio = of_get_named_gpio_flags(np,
-							    "st,reset-gpio", 0,
-							    NULL);
+	if (of_property_read_bool(np, "fts,reset-gpio")) {
+		bdata->reset_gpio = of_get_named_gpio(np, "fts,reset-gpio", 0);
 		logError(0, "%s reset_gpio =%d\n", tag, bdata->reset_gpio);
 	} else
 		bdata->reset_gpio = GPIO_NOT_DEFINED;
+
+	retval = of_property_read_u32(np, "fts,irq-flags", &temp_val);
+	if (retval < 0)
+		return retval;
+	else
+		bdata->irq_flags = temp_val;
+	
+	retval = of_property_read_u32(np, "fts,x-max", &temp_val);
+	if (retval < 0)
+		bdata->x_max = X_AXIS_MAX;
+	else
+		bdata->x_max = temp_val;
+
+	retval = of_property_read_u32(np, "fts,y-max", &temp_val);
+	if (retval < 0)
+		bdata->y_max = Y_AXIS_MAX;
+	else
+		bdata->y_max = temp_val;
 
 	return OK;
 }
@@ -4005,9 +4022,9 @@ static int fts_probe(struct spi_device *client)
 	/* input_mt_init_slots(info->input_dev, TOUCH_ID_MAX); */
 
 	input_set_abs_params(info->input_dev, ABS_MT_POSITION_X, X_AXIS_MIN,
-			     X_AXIS_MAX, 0, 0);
+			     info->board->x_max - 1, 0, 0);
 	input_set_abs_params(info->input_dev, ABS_MT_POSITION_Y, Y_AXIS_MIN,
-			     Y_AXIS_MAX, 0, 0);
+			     info->board->y_max - 1, 0, 0);
 	input_set_abs_params(info->input_dev, ABS_MT_TOUCH_MAJOR, AREA_MIN,
 			     AREA_MAX, 0, 0);
 	input_set_abs_params(info->input_dev, ABS_MT_TOUCH_MINOR, AREA_MIN,
