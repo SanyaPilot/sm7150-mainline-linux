@@ -49,6 +49,7 @@
 #include <linux/gpio.h>
 #include <linux/of_gpio.h>
 #include <linux/regulator/consumer.h>
+#include <linux/pinctrl/consumer.h>
 #include <linux/notifier.h>
 #include <linux/fb.h>
 #include <linux/input/mt.h>
@@ -2790,20 +2791,24 @@ static int fts_mode_handler(struct fts_ts_info *info, int force)
 static void fts_resume_work(struct work_struct *work)
 {
 	struct fts_ts_info *info;
-
-
+	int r;
 	info = container_of(work, struct fts_ts_info, resume_work);
 
-	pm_wakeup_event(info->dev, jiffies_to_msecs(HZ));
+	fts_disableInterrupt();
+
+#ifdef CONFIG_PINCTRL
+	if (info->ts_pinctrl) {
+		r = pinctrl_select_state(info->ts_pinctrl,
+					 info->pinctrl_state_active);
+		if (r < 0)
+			logError(1, "%s %s: Failed to select active pinstate, r:%d", tag, __func__, r);
+	}
+#endif
 
 	info->resume_bit = 1;
-
 	fts_system_reset();
-
 	release_all_touches(info);
-
 	fts_mode_handler(info, 0);
-
 	info->sensor_sleep = false;
 
 	fts_enableInterrupt();
@@ -2816,20 +2821,27 @@ static void fts_resume_work(struct work_struct *work)
 static void fts_suspend_work(struct work_struct *work)
 {
 	struct fts_ts_info *info;
-
 	info = container_of(work, struct fts_ts_info, suspend_work);
 
-	pm_wakeup_event(info->dev, jiffies_to_msecs(HZ));
-
+	fts_disableInterrupt();
 	info->resume_bit = 0;
 
+#ifdef CONFIG_PINCTRL
+	if (info->ts_pinctrl) {
+		int r = pinctrl_select_state(info->ts_pinctrl,
+					 info->pinctrl_state_suspend);
+		if (r < 0)
+			logError(1, "%s %s: Failed to select suspend pinstate, r:%d", tag, __func__, r);
+	}
+#endif
 	fts_mode_handler(info, 0);
-
 	release_all_touches(info);
-
 	info->sensor_sleep = true;
 
-	fts_enableInterrupt();
+	if (info->gesture_enabled) {
+		logError(1, "%s %s: enter gesture mode!\n", tag, __func__);
+		fts_enableInterrupt();
+	}
 }
 /** @}*/
 
@@ -2845,18 +2857,15 @@ static int fts_fb_state_chg_callback(struct notifier_block *nb, unsigned long
 	struct fts_ts_info *info = container_of(nb, struct fts_ts_info,
 						notifier);
 	struct fb_event *evdata = data;
-	unsigned int blank;
-
 
 	if (val != FB_EVENT_BLANK)
 		return 0;
 
 	logError(0, "%s %s: fts notifier begin!\n", tag, __func__);
 
-	if (evdata && evdata->data && val == FB_EVENT_BLANK && info) {
-		blank = *(int *)(evdata->data);
-
-
+	if (evdata && evdata->data && info) {
+		int blank = *(int*)evdata->data;
+		pr_info("%s %s: blank value: %d", tag, __func__, blank);
 		switch (blank) {
 		case FB_BLANK_POWERDOWN:
 			if (info->sensor_sleep)
@@ -3087,6 +3096,48 @@ err_gpio_irq:
 	return retval;
 }
 
+#ifdef CONFIG_PINCTRL
+static int fts_pinctrl_init(struct fts_ts_info *info)
+{
+	int retval = 0;
+	/* Get pinctrl if target uses pinctrl */
+	info->ts_pinctrl = devm_pinctrl_get(info->dev);
+
+	if (IS_ERR_OR_NULL(info->ts_pinctrl)) {
+		retval = PTR_ERR(info->ts_pinctrl);
+		dev_err(info->dev, "Target does not use pinctrl %d\n", retval);
+		goto err_pinctrl_get;
+	}
+
+	info->pinctrl_state_active
+	    = pinctrl_lookup_state(info->ts_pinctrl, PINCTRL_STATE_ACTIVE);
+
+	if (IS_ERR_OR_NULL(info->pinctrl_state_active)) {
+		retval = PTR_ERR(info->pinctrl_state_active);
+		dev_err(info->dev, "Can not lookup %s pinstate %d\n",
+			PINCTRL_STATE_ACTIVE, retval);
+		goto err_pinctrl_lookup;
+	}
+
+	info->pinctrl_state_suspend
+	    = pinctrl_lookup_state(info->ts_pinctrl, PINCTRL_STATE_SUSPEND);
+
+	if (IS_ERR_OR_NULL(info->pinctrl_state_suspend)) {
+		retval = PTR_ERR(info->pinctrl_state_suspend);
+		dev_dbg(info->dev, "Can not lookup %s pinstate %d\n",
+			PINCTRL_STATE_SUSPEND, retval);
+		goto err_pinctrl_lookup;
+	}
+
+	return 0;
+err_pinctrl_lookup:
+	devm_pinctrl_put(info->ts_pinctrl);
+err_pinctrl_get:
+	info->ts_pinctrl = NULL;
+	return retval;
+}
+#endif
+
 /**
   * Retrieve and parse the hw information from the device tree node defined in
   * the system.
@@ -3263,6 +3314,22 @@ static int fts_probe(struct spi_device *client)
 			 __func__);
 		goto ProbeErrorExit_2;
 	}
+
+#ifdef CONFIG_PINCTRL
+	logError(1, "%s %s: Pinctrl Init!\n", tag, __func__);
+	error = fts_pinctrl_init(info);
+
+	if (!error && info->ts_pinctrl) {
+		error = pinctrl_select_state(info->ts_pinctrl, info->pinctrl_state_active);
+		if (error < 0) {
+			logError(1, "%s %s: Failed to select %s pinstate %d\n",
+				tag, __func__, PINCTRL_STATE_ACTIVE, error);
+		}
+	} else {
+		logError(1, "%s %s: Failed to init pinctrl\n", tag, __func__);
+	}
+#endif
+
 	info->client->irq = gpio_to_irq(info->board->irq_gpio);
 
 	logError(1, "%s SET Event Handler:\n", tag);

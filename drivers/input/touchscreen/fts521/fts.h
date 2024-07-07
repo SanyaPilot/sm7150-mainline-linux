@@ -62,6 +62,9 @@
 
 #define RETRY_INIT_BOOT		3	/* /< number of retry of the
 					 * initialization process at boot */
+
+#define PINCTRL_STATE_ACTIVE		"default"
+#define PINCTRL_STATE_SUSPEND		"sleep"
 /* **** END **** */
 
 
@@ -249,6 +252,10 @@ struct fts_ts_info {
 					 * suspend/resume event */
 	bool sensor_sleep;	/* /< if true suspend was called while if false
 				 * resume was called */
+	
+	struct pinctrl *ts_pinctrl;
+	struct pinctrl_state *pinctrl_state_active;
+	struct pinctrl_state *pinctrl_state_suspend;
 
 	/* input lock */
 	struct mutex input_report_mutex; /* /< mutex for handling the report
