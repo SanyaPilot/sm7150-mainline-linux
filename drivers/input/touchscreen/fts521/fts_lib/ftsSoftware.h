@@ -517,4 +517,18 @@ typedef enum {
 #define FTS_KEY_6		0x40	/* /< Key 6 bit */
 #define FTS_KEY_7		0x80	/* /< Key 7 bit */
 
+#define HEADER_SIGNATURE	0xA5	/* /< signature used as starting byte of
+					 * data loaded in memory */
+
+/**
+  * Struct which contains the general info about Frames and Initialization Data
+  */
+typedef struct {
+	int force_node;	/* /< Number of Force Channels in the
+			 * frame/Initialization data */
+	int sense_node;	/* /< Number of Sense Channels in the
+			 * frame/Initialization data */
+	int type;	/* /< Type of frame/Initialization data */
+} DataHeader;
+
 #endif

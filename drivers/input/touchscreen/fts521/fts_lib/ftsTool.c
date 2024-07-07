@@ -29,7 +29,6 @@
   ******************************************************************************
   */
 
-#include "ftsCompensation.h"
 #include "ftsCore.h"
 #include "ftsError.h"
 #include "ftsHardware.h"

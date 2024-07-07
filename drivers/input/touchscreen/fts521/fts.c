@@ -54,7 +54,6 @@
 #include <linux/input/mt.h>
 
 #include "fts.h"
-#include "fts_lib/ftsCompensation.h"
 #include "fts_lib/ftsCore.h"
 #include "fts_lib/ftsIO.h"
 #include "fts_lib/ftsError.h"
