@@ -33,7 +33,6 @@
 #include <linux/slab.h>
 #include <linux/interrupt.h>
 #include <linux/gpio.h>
-#include "ftsCompensation.h"
 #include "ftsCore.h"
 #include "ftsError.h"
 #include "ftsIO.h"

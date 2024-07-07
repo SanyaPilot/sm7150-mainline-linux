@@ -40,7 +40,6 @@
 #include "ftsError.h"
 #include "ftsIO.h"
 #include "ftsTool.h"
-#include "ftsCompensation.h"
 
 
 static ErrorList errors;	/* /< private variable which implement the Error
