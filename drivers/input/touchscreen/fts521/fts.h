@@ -64,21 +64,6 @@
 					  * during production */
 #endif
 
-//#define FW_H_FILE  /* include the FW data as header file */
-#ifdef FW_H_FILE
-	#define FW_SIZE_NAME	myArray_size	/* /< name of the variable in
-						 * the FW header file which
-						 * specified the dimension of
-						 * the FW data array */
-	#define FW_ARRAY_NAME	myArray	/* /< name of the variable in the FW
-					 * header file which specified the FW
-					 * data array */
-/* #define FW_UPDATE_ON_PROBE */
- /* if defined the FW update will be execute on the probe, if not it will be
- * executed EXP_FN_WORK_DELAY_MS ms after the probe is completed */
-#endif
-
-#ifndef FW_UPDATE_ON_PROBE
 /* #define LIMITS_H_FILE */
 /* include the Production Limit File as header file, can be commented to use a
  * .csv file instead */
@@ -95,33 +80,9 @@
 							 * which specified the
 							 * limits data array */
 #endif
-#else
-/* if execute fw update in the probe the limit file must be a .h */
-#define LIMITS_H_FILE	/* /< include the Production Limit File as header file,
-			 * DO NOT COMMENT! */
-#define LIMITS_SIZE_NAME		myArray2_size	/* /< name of the
-							 * variable in the
-							 * limits header file
-							 * which specified the
-							 * dimension of the
-							 * limits data array */
-#define LIMITS_ARRAY_NAME		myArray2	/* /< name of the
-							 * variable in the
-							 * limits header file
-							 * which specified the
-							 * limits data array */
-#endif
 
 #define USE_ONE_FILE_NODE
 /* allow to enable/disable all the features just using one file node */
-
-#ifndef FW_UPDATE_ON_PROBE
-#define EXP_FN_WORK_DELAY_MS 1000	/* /< time in ms elapsed after the probe
-					 * to start the work which execute FW
-					 * update and the Initialization of the
-					 * IC */
-#endif
-
 /* **** END **** */
 
 
@@ -262,7 +223,6 @@ typedef void (*event_dispatch_handler_t)
   * - vdd_reg         DVDD power regulator \n
   * - avdd_reg        AVDD power regulator \n
   * - resume_bit      Indicate if screen off/on \n
-  * - fwupdate_stat   Store the result of a fw update triggered by the host \n
   * - notifier        Used for be notified from a suspend/resume event \n
   * - sensor_sleep    true suspend was called, false resume was called \n
   * - input_report_mutex  mutex for handling the pressure of keys \n
@@ -284,12 +244,6 @@ struct fts_ts_info {
 						 * handler, suspend and resume
 						 * work threads */
 
-#ifndef FW_UPDATE_ON_PROBE
-	struct delayed_work fwu_work;	/* /< Delayed work thread for fw update
-					 * process */
-	struct workqueue_struct    *fwu_workqueue;	/* /< Fw update work
-							 * queue */
-#endif
 	event_dispatch_handler_t *event_dispatch_table;	/* /< Event dispatch
 							 * table handlers */
 
@@ -310,11 +264,7 @@ struct fts_ts_info {
 	struct regulator *vdd_reg;	/* /< DVDD power regulator */
 	struct regulator *avdd_reg;	/* /< AVDD power regulator */
 
-
 	int resume_bit;	/* /< Indicate if screen off/on */
-	int fwupdate_stat;	/* /< Store the result of a fw update triggered
-				 * by the host */
-
 
 	struct notifier_block notifier;	/* /< Used for be notified from a
 					 * suspend/resume event */
