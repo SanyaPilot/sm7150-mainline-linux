@@ -37,7 +37,6 @@
 #include "ftsCore.h"
 #include "ftsError.h"
 #include "ftsIO.h"
-#include "ftsTest.h"
 #include "ftsTime.h"
 #include "ftsTool.h"
 
@@ -79,7 +78,6 @@ int initCore(struct fts_ts_info *info)
 	logError(0, "%s %s: Initialization of the Core...\n", tag, __func__);
 	ret |= openChannel(info->client);
 	ret |= resetErrorList();
-	ret |= initTestToDo();
 	setResetGpio(info->board->reset_gpio);
 	if (ret < OK)
 		logError(0, "%s %s: Initialization Core ERROR %08X!\n", tag,
