@@ -54,35 +54,14 @@
 			 * of the driver and fts_lib from comand shell (usefull
 			 * for enginering/debug operations) */
 
-
-/* If both COMPUTE_INIT_METHOD and PRE_SAVED_METHOD are not defined,
- * driver will be automatically configured as GOLDEN_VALUE_METHOD */
-// #define COMPUTE_INIT_METHOD /* Allow to compute init data on phone during
-//								production */
-#ifndef COMPUTE_INIT_METHOD
-		#define PRE_SAVED_METHOD /* Pre-Saved Method used
-					  * during production */
-#endif
-
-/* #define LIMITS_H_FILE */
-/* include the Production Limit File as header file, can be commented to use a
- * .csv file instead */
-#ifdef LIMITS_H_FILE
-	#define LIMITS_SIZE_NAME	myArray2_size	/* /< name of the
-							 * variable in the
-							 * limits header file
-							 * which specified the
-							 * dimension of the
-							 * limits data array */
-	#define LIMITS_ARRAY_NAME	myArray2	/* /< name of the
-							 * variable in the
-							 * limits header file
-							 * which specified the
-							 * limits data array */
-#endif
+#define PRE_SAVED_METHOD /* Pre-Saved Method used
+				* during production */
 
 #define USE_ONE_FILE_NODE
 /* allow to enable/disable all the features just using one file node */
+
+#define RETRY_INIT_BOOT		3	/* /< number of retry of the
+					 * initialization process at boot */
 /* **** END **** */
 
 

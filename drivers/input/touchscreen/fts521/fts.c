@@ -60,7 +60,6 @@
 #include "fts_lib/ftsError.h"
 #include "fts_lib/ftsFrame.h"
 #include "fts_lib/ftsGesture.h"
-#include "fts_lib/ftsTest.h"
 #include "fts_lib/ftsTime.h"
 #include "fts_lib/ftsTool.h"
 
@@ -77,7 +76,6 @@
 #define TYPE_B_PROTOCOL
 
 extern SysInfo systemInfo;
-extern TestToDo tests;
 #ifdef GESTURE_MODE
 extern struct mutex gestureMask_mutex;
 #endif
@@ -85,12 +83,6 @@ extern struct mutex gestureMask_mutex;
 char tag[8] = "[ FTS ]\0";
 char fts_ts_phys[64];	/* /< buffer which store the input device name assigned
 			 * by the kernel */
-
-static u32 typeOfComand[CMD_STR_LEN] = { 0 };	/* /< buffer used to store the
-						  * command sent from the MP
-						  * device file node */
-static int numberParameters;	/* /< number of parameter passed through the MP
-				  * device file node */
 #ifdef USE_ONE_FILE_NODE
 static int feature_feasibility = ERROR_OP_NOT_ALLOW;
 #endif
@@ -116,7 +108,7 @@ static int fts_init_sensing(struct fts_ts_info *info);
 static int fts_mode_handler(struct fts_ts_info *info, int force);
 
 
-static int fts_chip_initialization(struct fts_ts_info *info, int init_type);
+static int fts_chip_initialization(struct fts_ts_info *info, u8 init_type);
 
 
 /**
@@ -1313,528 +1305,8 @@ static ssize_t fts_gesture_coordinates_show(struct device *dev,
 }
 #endif
 
-
-
-/***************************************** PRODUCTION TEST
- * ***************************************************/
-
-/**
-  * File node to execute the Mass Production Test or to get data from the IC
-  * (raw or ms/ss init data)
-  * echo cmd > stm_fts_cmd	to execute a command \n
-  * cat stm_fts_cmd	to show the result of the command \n
-  * echo cmd > stm_fts_cmd; cat stm_fts_cmd	to execute and show the result
-  * in just one call \n
-  * the string returned in the shell is made up as follow: \n
-  * { = start byte \n
-  * X1X2X3X4 = 4 bytes in HEX format which represent an error_code (00000000 =
-  * OK)\n
-  * (optional) data = data coming from the command executed represented as HEX
-  * string \n
-  *                   Not all the command return additional data \n
-  * } = end byte \n
-  * \n
-  * Possible commands (cmd): \n
-  * - 00 = MP Test -> return error_code \n
-  * - 01 = ITO Test -> return error_code \n
-  * - 03 = MS Raw Test -> return error_code \n
-  * - 04 = MS Init Data Test -> return error_code \n
-  * - 05 = SS Raw Test -> return error_code \n
-  * - 06 = SS Init Data Test -> return error_code \n
-  * - 13 xx(optional) = Read 1 MS Raw Frame -> return additional data:
-  * MS frame row after row. if xx = 1, will read LP frame \n
-  * - 14 = Read MS Init Data -> return additional data: MS init data row after
-  * row \n
-  * - 15 xx(optional) = Read 1 SS Raw Frame -> return additional data: SS frame,
-  * force channels followed by sense channels. If xx = 1, will read LP frame \n
-  * - 16 = Read SS Init Data -> return additional data: SS Init data,
-  * first IX for force and sense channels and then CX for force and sense
-  * channels \n
-  * - F0 = Perform a system reset -> return error_code \n
-  * - F1 = Perform a system reset and reenable the sensing and the interrupt
-  */
-static ssize_t stm_fts_cmd_store(struct device *dev,
-				struct device_attribute *attr, const char *buf,
-				size_t count)
-{
-	int n;
-	char *p = (char *)buf;
-
-	memset(typeOfComand, 0, CMD_STR_LEN * sizeof(u32));
-	numberParameters = 0;
-	logError(1, "%s\n", tag);
-	for (n = 0; n < (count + 1) / 3; n++) {
-		if (sscanf(p, "%02X ", &typeOfComand[n]) == 1) {
-			p += 3;
-			logError(1, "%s typeOfComand[%d] = %02X\n", tag, n,
-			 typeOfComand[n]);
-			numberParameters++;
-		}
-	}
-
-	/* numberParameters = n; */
-	logError(1, "%s Number of Parameters = %d\n", tag, numberParameters);
-	return count;
-}
-
-static ssize_t stm_fts_cmd_show(struct device *dev,
-				struct device_attribute *attr, char *buf)
-{
-	int res, j, doClean = 0, count = 0, index = 0;
-
-	int size = (6 * 2) + 1;
-	int init_type = SPECIAL_PANEL_INIT;
-	u8 *all_strbuff = NULL;
-	struct fts_ts_info *info = dev_get_drvdata(dev);
-
-	MutualSenseData compData;
-	SelfSenseData comData;
-	MutualSenseFrame frameMS;
-	SelfSenseFrame frameSS;
-
-
-	if (numberParameters >= 1) {
-		res = fts_disableInterrupt();
-		if (res < 0) {
-			logError(0, "%s fts_disableInterrupt: ERROR %08X\n",
-				 tag, res);
-			res = (res | ERROR_DISABLE_INTER);
-			goto END;
-		}
-
-
-
-		res = fb_unregister_client(&info->notifier);
-		if (res < 0) {
-			logError(1, "%s ERROR: unregister notifier failed!\n",
-				 tag);
-			goto END;
-		}
-
-
-		switch (typeOfComand[0]) {
-		/*ITO TEST*/
-		case 0x01:
-			res = production_test_ito(LIMITS_FILE, &tests);
-			break;
-		/*PRODUCTION TEST*/
-		case 0x00:
-#ifndef COMPUTE_INIT_METHOD
-			if (systemInfo.u8_cfgAfeVer != systemInfo.u8_cxAfeVer) {
-				res = ERROR_OP_NOT_ALLOW;
-				logError(0,
-					 "%s Miss match in CX version! MP test not allowed with wrong CX memory! ERROR %08X\n",
-					 tag, res);
-				break;
-			}
-#else
-			if (systemInfo.u8_mpFlag != MP_FLAG_FACTORY) {
-				init_type = SPECIAL_FULL_PANEL_INIT;
-				logError(0,
-					"%s Select Full Panel Init!\n", tag);
-			} else {
-				init_type = NO_INIT;
-				logError(0,
-					"%s Skip Full Panel Init!\n", tag);
-			}
-#endif
-
-			res = production_test_main(LIMITS_FILE, 1, init_type,
-						   &tests, MP_FLAG_FACTORY);
-			break;
-		/*read mutual raw*/
-		case 0x13:
-			logError(0, "%s Get 1 MS Frame\n", tag);
-			if (numberParameters >= 2 && typeOfComand[1] == 1)
-				setScanMode(SCAN_MODE_LOCKED, LOCKED_LP_ACTIVE);
-			else
-				setScanMode(SCAN_MODE_LOCKED, LOCKED_ACTIVE);
-			msleep(WAIT_FOR_FRESH_FRAMES);
-			setScanMode(SCAN_MODE_ACTIVE, 0x00);
-			msleep(WAIT_AFTER_SENSEOFF);
-			flushFIFO();	/* delete the events related to some
-					 * touch (allow to call this function
-					 * while touching the screen without
-					 * having a flooding of the FIFO) */
-			res = getMSFrame3(MS_RAW, &frameMS);
-			if (res < 0)
-				logError(0,
-					 "%s Error while taking the MS frame... ERROR %08X\n",
-					 tag, res);
-
-			else {
-				logError(0, "%s The frame size is %d words\n",
-					 tag, res);
-				size += (res * sizeof(short) + 2) * 2;
-				/* set res to OK because if getMSFrame is */
-				/* successful res = number of words read */
-				res = OK;
-					print_frame_short(
-						"MS frame =",
-						array1dTo2d_short(
-							frameMS.node_data,
-							frameMS.node_data_size,
-							frameMS.header.
-							sense_node),
-						frameMS.header.force_node,
-						frameMS.header.sense_node);
-			}
-			break;
-		/*read self raw*/
-		case 0x15:
-			logError(0, "%s Get 1 SS Frame\n", tag);
-			if (numberParameters >= 2 && typeOfComand[1] == 1)
-				setScanMode(SCAN_MODE_LOCKED, LOCKED_LP_DETECT);
-			else
-				setScanMode(SCAN_MODE_LOCKED, LOCKED_ACTIVE);
-			msleep(WAIT_FOR_FRESH_FRAMES);
-			setScanMode(SCAN_MODE_ACTIVE, 0x00);
-			msleep(WAIT_AFTER_SENSEOFF);
-			flushFIFO();	/* delete the events related to some
-					 * touch (allow to call this function
-					 * while touching the screen without
-					 * having a flooding of the FIFO) */
-			if (numberParameters >= 2 && typeOfComand[1] == 1)
-				res = getSSFrame3(SS_DETECT_RAW, &frameSS);
-			else
-				res = getSSFrame3(SS_RAW, &frameSS);
-
-			if (res < OK)
-				logError(0,
-					 "%s Error while taking the SS frame... ERROR %08X\n",
-					 tag, res);
-
-			else {
-				logError(0, "%s The frame size is %d words\n",
-					 tag, res);
-				size += (res * sizeof(short) + 2) * 2;
-				/* set res to OK because if getMSFrame is */
-				/* successful res = number of words read */
-				res = OK;
-				print_frame_short("SS force frame =",
-						  array1dTo2d_short(
-							  frameSS.force_data,
-							  frameSS.
-							  header.force_node, 1),
-						  frameSS.header.force_node, 1);
-				print_frame_short("SS sense frame =",
-						  array1dTo2d_short(
-							  frameSS.sense_data,
-							  frameSS.
-							  header.sense_node,
-							  frameSS.
-							  header.sense_node), 1,
-						  frameSS.header.sense_node);
-			}
-
-			break;
-
-		case 0x14:	/* read mutual comp data */
-			logError(0, "%s Get MS Compensation Data\n", tag);
-			res = readMutualSenseCompensationData(LOAD_CX_MS_TOUCH,
-							      &compData);
-
-			if (res < 0)
-				logError(0,
-					 "%s Error reading MS compensation data ERROR %08X\n",
-					 tag, res);
-			else {
-				logError(0,
-					 "%s MS Compensation Data Reading Finished!\n",
-					 tag);
-				size += ((compData.node_data_size + 3) *
-					 sizeof(u8)) * 2;
-				print_frame_i8("MS Data (Cx2) =",
-					       array1dTo2d_i8(
-						       compData.node_data,
-						       compData.
-						       node_data_size,
-						       compData.header.
-						       sense_node),
-					       compData.header.force_node,
-					       compData.header.sense_node);
-			}
-			break;
-
-		case 0x16:	/* read self comp data */
-			logError(0, "%s Get SS Compensation Data...\n", tag);
-			res = readSelfSenseCompensationData(LOAD_CX_SS_TOUCH,
-							    &comData);
-			if (res < 0)
-				logError(0,
-					 "%s Error reading SS compensation data ERROR %08X\n",
-					 tag, res);
-			else {
-				logError(0,
-					 "%s SS Compensation Data Reading Finished!\n",
-					 tag);
-				size += ((comData.header.force_node +
-					  comData.header.sense_node) * 2 + 8) *
-					sizeof(u8) * 2;
-				print_frame_u8("SS Data Ix2_fm = ",
-					       array1dTo2d_u8(comData.ix2_fm,
-							      comData.header.
-							      force_node, 1),
-					       comData.header.force_node, 1);
-				print_frame_i8("SS Data Cx2_fm = ",
-					       array1dTo2d_i8(comData.cx2_fm,
-							      comData.header.
-							      force_node, 1),
-					       comData.header.force_node, 1);
-				print_frame_u8("SS Data Ix2_sn = ",
-					       array1dTo2d_u8(comData.ix2_sn,
-							      comData.header.
-							      sense_node,
-							      comData.header.
-							      sense_node), 1,
-					       comData.header.sense_node);
-				print_frame_i8("SS Data Cx2_sn = ",
-					       array1dTo2d_i8(comData.cx2_sn,
-							      comData.header.
-							      sense_node,
-							      comData.header.
-							      sense_node), 1,
-					       comData.header.sense_node);
-			}
-			break;
-
-		case 0x03:	/* MS Raw DATA TEST */
-			res = fts_system_reset();
-			if (res >= OK)
-				res = production_test_ms_raw(LIMITS_FILE, 1,
-							     &tests);
-			break;
-
-		case 0x04:	/* MS CX DATA TEST */
-			res = fts_system_reset();
-			if (res >= OK)
-				res = production_test_ms_cx(LIMITS_FILE, 1,
-							    &tests);
-			break;
-
-		case 0x05:	/* SS RAW DATA TEST */
-			res = fts_system_reset();
-			if (res >= OK)
-				res = production_test_ss_raw(LIMITS_FILE, 1,
-							     &tests);
-			break;
-
-		case 0x06:	/* SS IX CX DATA TEST */
-			res = fts_system_reset();
-			if (res >= OK)
-				res = production_test_ss_ix_cx(LIMITS_FILE, 1,
-							       &tests);
-			break;
-
-
-		case 0xF0:
-		case 0xF1:	/* TOUCH ENABLE/DISABLE */
-			doClean = (int)(typeOfComand[0] & 0x01);
-			res = cleanUp(doClean);
-			break;
-
-		default:
-			logError(1,
-				 "%s COMMAND NOT VALID!! Insert a proper value ...\n",
-				 tag);
-			res = ERROR_OP_NOT_ALLOW;
-			break;
-		}
-
-		doClean = fts_mode_handler(info, 1);
-		if (typeOfComand[0] != 0xF0)
-			doClean |= fts_enableInterrupt();
-		if (doClean < 0)
-			logError(0, "%s %s: ERROR %08X\n", tag, __func__,
-				 (doClean | ERROR_ENABLE_INTER));
-	} else {
-		logError(1,
-			 "%s NO COMMAND SPECIFIED!!! do: 'echo [cmd_code] [args] > stm_fts_cmd' before looking for result!\n",
-			 tag);
-		res = ERROR_OP_NOT_ALLOW;
-	}
-
-
-
-	if (fb_register_client(&info->notifier) < 0)
-		logError(1, "%s ERROR: register notifier failed!\n", tag);
-
-
-END:
-	/* here start the reporting phase, assembling the data
-	  * to send in the file node */
-	all_strbuff = (u8 *)kzalloc(size, GFP_KERNEL);
-
-	snprintf(&all_strbuff[index], 11, "{ %08X", res);
-	index += 10;
-
-	if (res >= OK) {
-		/*all the other cases are already fine printing only the res.*/
-		switch (typeOfComand[0]) {
-		case 0x13:
-			snprintf(&all_strbuff[index], 3, "%02X",
-				 (u8)frameMS.header.force_node);
-			index += 2;
-
-			snprintf(&all_strbuff[index], 3, "%02X",
-				 (u8)frameMS.header.sense_node);
-			index += 2;
-
-			for (j = 0; j < frameMS.node_data_size; j++) {
-				snprintf(&all_strbuff[index], 5, "%02X%02X",
-					 (frameMS.node_data[j] & 0xFF00) >> 8,
-					 frameMS.node_data[j] & 0xFF);
-				index += 4;
-			}
-
-			kfree(frameMS.node_data);
-			break;
-
-		case 0x15:
-			snprintf(&all_strbuff[index], 3, "%02X",
-				 (u8)frameSS.header.force_node);
-			index += 2;
-
-			snprintf(&all_strbuff[index], 3, "%02X",
-				 (u8)frameSS.header.sense_node);
-			index += 2;
-
-			/* Copying self raw data Force */
-			for (j = 0; j < frameSS.header.force_node; j++) {
-				snprintf(&all_strbuff[index], 5, "%02X%02X",
-					 (frameSS.force_data[j] & 0xFF00) >> 8,
-					 frameSS.force_data[j] & 0xFF);
-				index += 4;
-			}
-
-
-			/* Copying self raw data Sense */
-			for (j = 0; j < frameSS.header.sense_node; j++) {
-				snprintf(&all_strbuff[index], 5, "%02X%02X",
-					 (frameSS.sense_data[j] & 0xFF00) >> 8,
-					 frameSS.sense_data[j] & 0xFF);
-				index += 4;
-			}
-
-			kfree(frameSS.force_data);
-			kfree(frameSS.sense_data);
-			break;
-
-		case 0x14:
-			snprintf(&all_strbuff[index], 3, "%02X",
-				 (u8)compData.header.force_node);
-			index += 2;
-
-			snprintf(&all_strbuff[index], 3, "%02X",
-				 (u8)compData.header.sense_node);
-			index += 2;
-
-			/* Cpying CX1 value */
-			snprintf(&all_strbuff[index], 3, "%02X",
-				 (compData.cx1) & 0xFF);
-			index += 2;
-
-			/* Copying CX2 values */
-			for (j = 0; j < compData.node_data_size; j++) {
-				snprintf(&all_strbuff[index], 3, "%02X",
-					 (compData.node_data[j]) & 0xFF);
-				index += 2;
-			}
-
-			kfree(compData.node_data);
-			break;
-
-		case 0x16:
-			snprintf(&all_strbuff[index], 3, "%02X",
-				 comData.header.force_node);
-			index += 2;
-
-			snprintf(&all_strbuff[index], 3, "%02X",
-				 comData.header.sense_node);
-			index += 2;
-
-			snprintf(&all_strbuff[index], 3, "%02X",
-				 (comData.f_ix1) & 0xFF);
-			index += 2;
-
-			snprintf(&all_strbuff[index], 3, "%02X",
-				 (comData.s_ix1) & 0xFF);
-			index += 2;
-
-			snprintf(&all_strbuff[index], 3, "%02X",
-				 (comData.f_cx1) & 0xFF);
-			index += 2;
-
-			snprintf(&all_strbuff[index], 3, "%02X",
-				 (comData.s_cx1) & 0xFF);
-			index += 2;
-
-			snprintf(&all_strbuff[index], 3, "%02X",
-				 (comData.f_ix0) & 0xFF);
-			index += 2;
-
-			snprintf(&all_strbuff[index], 3, "%02X",
-				 (comData.s_ix0) & 0xFF);
-			index += 2;
-
-			/* Copying IX2 Force */
-			for (j = 0; j < comData.header.force_node; j++) {
-				snprintf(&all_strbuff[index], 3, "%02X",
-					 comData.ix2_fm[j] & 0xFF);
-				index += 2;
-			}
-
-			/* Copying IX2 Sense */
-			for (j = 0; j < comData.header.sense_node; j++) {
-				snprintf(&all_strbuff[index], 3, "%02X",
-					 comData.ix2_sn[j] & 0xFF);
-				index += 2;
-			}
-
-			/* Copying CX2 Force */
-			for (j = 0; j < comData.header.force_node; j++) {
-				snprintf(&all_strbuff[index], 3, "%02X",
-					 comData.cx2_fm[j] & 0xFF);
-				index += 2;
-			}
-
-			/* Copying CX2 Sense */
-			for (j = 0; j < comData.header.sense_node; j++) {
-				snprintf(&all_strbuff[index], 3, "%02X",
-					 comData.cx2_sn[j] & 0xFF);
-				index += 2;
-			}
-
-			kfree(comData.ix2_fm);
-			kfree(comData.ix2_sn);
-			kfree(comData.cx2_fm);
-			kfree(comData.cx2_sn);
-			break;
-
-		default:
-			break;
-		}
-	}
-
-	snprintf(&all_strbuff[index], 3, " }");
-	index += 2;
-
-
-	count = snprintf(buf, TSP_BUF_SIZE, "%s\n", all_strbuff);
-	numberParameters = 0;
-	/* need to reset the number of parameters in order to wait the
-	  * next command, comment if you want to repeat the last command sent
-	  * just doing a cat */
-	/* logError(0,"%s numberParameters = %d\n",tag, numberParameters); */
-	kfree(all_strbuff);
-
-	return count;
-}
-
 static DEVICE_ATTR(appid, (S_IRUGO), fts_appid_show, NULL);
 static DEVICE_ATTR(mode_active, (S_IRUGO), fts_mode_active_show, NULL);
-static DEVICE_ATTR(stm_fts_cmd, (S_IRUGO | S_IWUSR | S_IWGRP), stm_fts_cmd_show,
-		   stm_fts_cmd_store);
 #ifdef USE_ONE_FILE_NODE
 static DEVICE_ATTR(feature_enable, (S_IRUGO | S_IWUSR | S_IWGRP),
 		   fts_feature_enable_show, fts_feature_enable_store);
@@ -1879,7 +1351,6 @@ static DEVICE_ATTR(gesture_coordinates, (S_IRUGO | S_IWUSR | S_IWGRP),
 static struct attribute *fts_attr_group[] = {
 	&dev_attr_appid.attr,
 	&dev_attr_mode_active.attr,
-	&dev_attr_stm_fts_cmd.attr,
 #ifdef USE_ONE_FILE_NODE
 	&dev_attr_feature_enable.attr,
 #else
@@ -2686,7 +2157,7 @@ int fts_init_flow(struct fts_ts_info *info)
 				  EVT_TYPE_ERROR_CRC_CX_SUB };
 	int ret;
 	int error = 0;
-	int init_type = NO_INIT;
+	u8 init_type = 0;
 
 	logError(1, "%s %s: Verifying if CX CRC Error...\n", tag, __func__);
 	ret = fts_system_reset();
@@ -2705,7 +2176,7 @@ int fts_init_flow(struct fts_ts_info *info)
 					 "%s %s: No Panel CRC Error Found!\n",
 					 tag,
 					 __func__);
-				init_type = NO_INIT;
+				init_type = 0;
 			} else {
 				logError(1,
 					 "%s %s: Panel CRC Error FOUND! CRC ERROR = %02X\n",
@@ -2732,13 +2203,8 @@ int fts_init_flow(struct fts_ts_info *info)
 
 
 	if (init_type != SPECIAL_FULL_PANEL_INIT) {
-#if defined(PRE_SAVED_METHOD) || defined(COMPUTE_INIT_METHOD)
-		if ((systemInfo.u8_cfgAfeVer != systemInfo.u8_cxAfeVer)
-#ifdef COMPUTE_INIT_METHOD
-			|| ((systemInfo.u8_mpFlag != MP_FLAG_BOOT) &&
-				(systemInfo.u8_mpFlag != MP_FLAG_FACTORY))
-#endif
-			) {
+#ifdef PRE_SAVED_METHOD
+		if ((systemInfo.u8_cfgAfeVer != systemInfo.u8_cxAfeVer)) {
 			init_type = SPECIAL_FULL_PANEL_INIT;
 			logError(0,
 				 "%s %s: Different CX AFE Ver: %02X != %02X or invalid MpFlag = %02X... Execute FULL Panel Init!\n",
@@ -2753,11 +2219,10 @@ int fts_init_flow(struct fts_ts_info *info)
 				 tag, __func__, systemInfo.u8_cfgAfeVer,
 				 systemInfo.u8_panelCfgAfeVer);
 		} else
-			init_type = NO_INIT;
+			init_type = 0;
 	}
 
-
-	if (init_type != NO_INIT) {	/* initialization status not correct or
+	if (init_type != 0) {	/* initialization status not correct or
 					 * after FW complete update, do
 					 * initialization. */
 		error = fts_chip_initialization(info, init_type);
@@ -2778,42 +2243,70 @@ int fts_init_flow(struct fts_ts_info *info)
 	return error;
 }
 
-/* TODO: define if need to do the full mp at the boot */
 /**
   *	Execute the initialization of the IC (supporting a retry mechanism),
   * checking also the resulting data
-  *	@see  production_test_main()
   */
-static int fts_chip_initialization(struct fts_ts_info *info, int init_type)
+static int fts_chip_initialization(struct fts_ts_info *info, u8 init_type)
 {
-	int ret2 = 0;
+	int res = 0;
 	int retry;
-	int initretrycnt = 0;
+
+	logError(0, "%s Chip initialization is starting...\n", tag);
+	if (init_type != SPECIAL_PANEL_INIT && init_type != SPECIAL_FULL_PANEL_INIT) {
+		logError(1,
+			 "%s %s: Type incompatible! Type = %02X ERROR %08X\n",
+			 tag, __func__, init_type, ERROR_OP_NOT_ALLOW |
+			 ERROR_PROD_TEST_INITIALIZATION);
+		return ERROR_OP_NOT_ALLOW | ERROR_PROD_TEST_INITIALIZATION;
+	}
 
 	/* initialization error, retry initialization */
 	for (retry = 0; retry < RETRY_INIT_BOOT; retry++) {
-#ifndef COMPUTE_INIT_METHOD
-		ret2 = production_test_initialization(init_type);
-#else
-		ret2 = production_test_main(LIMITS_FILE, 1, init_type, &tests,
-			MP_FLAG_BOOT);
-#endif
-		if (ret2 == OK)
-			break;
-		initretrycnt++;
+		res = fts_system_reset();
+		if (res < 0) {
+			logError(1, "%s %s: ERROR %08X\n",
+				tag, __func__, ERROR_PROD_TEST_INITIALIZATION);
+			res |= ERROR_PROD_TEST_INITIALIZATION;
+			goto retry;
+		}
+
+		logError(0, "%s INITIALIZATION command sent... %02X\n", tag, init_type);
+		res = writeSysCmd(SYS_CMD_SPECIAL, &init_type, 1);
+		if (res < OK) {
+			logError(1, "%s %s: ERROR %08X\n",
+				tag, __func__, (res | ERROR_PROD_TEST_INITIALIZATION));
+			res |= ERROR_PROD_TEST_INITIALIZATION;
+			goto retry;
+		}
+
+
+		logError(0, "%s Refresh Sys Info...\n", tag);
+		res |= readSysInfo(1);	/* need to update the chipInfo in order
+					* to refresh several versions */
+
+		if (res < 0) {
+			logError(1,
+				"%s %s: read sys info ERROR %08X\n",
+				tag, __func__, ERROR_PROD_TEST_INITIALIZATION);
+			res |= ERROR_PROD_TEST_INITIALIZATION;
+			goto retry;
+		}
+
+		break;
+retry:	
 		logError(1,
 			 "%s initialization cycle count = %04d - ERROR %08X\n",
 			 tag,
-			 initretrycnt, ret2);
+			 retry, res);
 		fts_chip_powercycle(info);
 	}
-	if (ret2 < OK)	/* initialization error */
 
+	if (res < OK)	/* initialization error */
 		logError(1, "%s fts initialization failed %d times\n", tag,
 			RETRY_INIT_BOOT);
 
-
-	return ret2;
+	return res;
 }
 
 /**
