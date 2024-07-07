@@ -104,7 +104,6 @@
 	clock-frequency = <100000>;
 	status = "okay";
 
-	/* st,fts (touchscreen) @ 49 */
 	touchscreen: fts@49 {
 		compatible = "st,fts";
 		reg = <0x49>;
@@ -112,7 +111,7 @@
 		interrupts = <9 0x2008>;
 		pinctrl-0 = <&ts_int_active &ts_reset_active>;
 		pinctrl-1 = <&ts_int_suspend &ts_reset_suspend>;
-		pinctrl-names = "pmx_ts_active", "pmx_ts_suspend";
+		pinctrl-names = "default", "sleep";
 		vdd-supply = <&touch_vddio_vreg>;
 		avdd-supply = <&vreg_l6c_3p0>;
 		fts,regulator_dvdd = "vdd";
