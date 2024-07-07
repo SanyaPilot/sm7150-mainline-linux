@@ -4119,10 +4119,6 @@ static int fts_probe(struct spi_device *client)
 		goto ProbeErrorExit_7;
 	}
 
-	error = fts_proc_init();
-	if (error < OK)
-		logError(1, "%s Error: can not create /proc file!\n", tag);
-
 #ifndef FW_UPDATE_ON_PROBE
 	queue_delayed_work(info->fwu_workqueue, &info->fwu_work,
 			   msecs_to_jiffies(EXP_FN_WORK_DELAY_MS));
@@ -4176,8 +4172,6 @@ static void fts_remove(struct spi_device *client)
 #endif
 
 	struct fts_ts_info *info = dev_get_drvdata(&(client->dev));
-
-	fts_proc_remove();
 
 	/* sysfs stuff */
 	sysfs_remove_group(&client->dev.kobj, &info->attrs);
