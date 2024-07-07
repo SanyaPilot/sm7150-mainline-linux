@@ -58,7 +58,6 @@
 #include "fts_lib/ftsCore.h"
 #include "fts_lib/ftsIO.h"
 #include "fts_lib/ftsError.h"
-#include "fts_lib/ftsFlash.h"
 #include "fts_lib/ftsFrame.h"
 #include "fts_lib/ftsGesture.h"
 #include "fts_lib/ftsTest.h"
@@ -167,68 +166,6 @@ void release_all_touches(struct fts_ts_info *info)
   * the IC (e.g /sys/devices/soc.0/f9928000.i2c/i2c-6/6-0049)
   * @{
   */
-/***************************************** FW UPGGRADE
- * ***************************************************/
-
-/**
-  * File node function to Update firmware from shell \n
-  * echo path_to_fw X Y > fwupdate   perform a fw update \n
-  * where: \n
-  * path_to_fw = file name or path of the the FW to burn, if "NULL" the default
-  * approach selected in the driver will be used\n
-  * X = 0/1 to force the FW update whichever fw_version and config_id;
-  * 0=perform a fw update only if the fw in the file is newer than the fw in the
-  * chip \n
-  * Y = 0/1 keep the initialization data; 0 = will erase the initialization data
-  * from flash, 1 = will keep the initialization data
-  * the string returned in the shell is made up as follow: \n
-  * { = start byte \n
-  * X1X2X3X4 = 4 bytes in HEX format which represent an error code (00000000 no
-  * error) \n
-  * } = end byte
-  */
-static ssize_t fts_fwupdate_store(struct device *dev,
-				struct device_attribute *attr,
-				const char *buf, size_t count)
-{
-	int ret, mode[2];
-	char path[100];
-	struct fts_ts_info *info = dev_get_drvdata(dev);
-
-	/* default(if not specified by user) set force = 0 and keep_cx to 1 */
-	mode[0] = 0;
-	mode[1] = 1;
-
-	/* reading out firmware upgrade parameters */
-	if (sscanf(buf, "%100s %d %d", path, &mode[0], &mode[1]) >= 1) {
-		logError(1, "%s fts_fwupdate_store: file = %s, force = %d, keep_cx = %d\n",
-			tag, path, mode[0], mode[1]);
-
-
-		ret = flashProcedure(path, mode[0], mode[1]);
-
-		info->fwupdate_stat = ret;
-
-		if (ret < OK)
-			logError(1, "%s  %s Unable to upgrade firmware! ERROR %08X\n",
-				 tag, __func__, ret);
-	} else
-		logError(1, "%s  %s Wrong number of parameters! ERROR %08X\n",
-				 tag, __func__, ERROR_OP_NOT_ALLOW);
-
-	return count;
-}
-
-static ssize_t fts_fwupdate_show(struct device *dev,
-				struct device_attribute *attr, char *buf)
-{
-	struct fts_ts_info *info = dev_get_drvdata(dev);
-
-	/* fwupdate_stat: ERROR code Returned by flashProcedure. */
-	return snprintf(buf, 14, "{ %08X }\n", info->fwupdate_stat);
-}
-
-
 /***************************************** UTILITIES
   * (current fw_ver/conf_id, active mode, file fw_ver/conf_id)
   ***************************************************/
@@ -276,35 +213,6 @@ static ssize_t fts_mode_active_show(struct device *dev,
 	logError(1, "%s Current mode active = %08X\n", tag, info->mode);
 	return snprintf(buf, 14, "{ %08X }\n", info->mode);
 }
-
-/**
-  * File node to show the fw_ver and config_id of the FW file
-  * cat fw_file_test			show on the kernel log external release
-  * of the FW stored in the fw file/header file
-  */
-static ssize_t fts_fw_test_show(struct device *dev,
-				struct device_attribute *attr, char *buf)
-{
-	Firmware fw;
-	int ret;
-	char temp[100] = { 0 };
-
-	fw.data = NULL;
-	ret = readFwFile(PATH_FILE_FW, &fw, 0);
-
-	if (ret < OK)
-		logError(1, "%s Error during reading FW file! ERROR %08X\n",
-			 tag, ret);
-	else
-		logError(1, "%s %s, size = %d bytes\n", tag, printHex(
-				 "EXT Release = ", systemInfo.u8_releaseInfo,
-				 EXTERNAL_RELEASE_INFO_SIZE, temp),
-			 fw.data_size);
-
-	kfree(fw.data);
-	return 0;
-}
-
 
 #if 0
 /**
@@ -1923,11 +1831,8 @@ END:
 	return count;
 }
 
-static DEVICE_ATTR(fwupdate, (S_IRUGO | S_IWUSR | S_IWGRP), fts_fwupdate_show,
-		   fts_fwupdate_store);
 static DEVICE_ATTR(appid, (S_IRUGO), fts_appid_show, NULL);
 static DEVICE_ATTR(mode_active, (S_IRUGO), fts_mode_active_show, NULL);
-static DEVICE_ATTR(fw_file_test, (S_IRUGO), fts_fw_test_show, NULL);
 static DEVICE_ATTR(stm_fts_cmd, (S_IRUGO | S_IWUSR | S_IWGRP), stm_fts_cmd_show,
 		   stm_fts_cmd_store);
 #ifdef USE_ONE_FILE_NODE
@@ -1972,10 +1877,8 @@ static DEVICE_ATTR(gesture_coordinates, (S_IRUGO | S_IWUSR | S_IWGRP),
 
 /*  /sys/devices/soc.0/f9928000.i2c/i2c-6/6-0049 */
 static struct attribute *fts_attr_group[] = {
-	&dev_attr_fwupdate.attr,
 	&dev_attr_appid.attr,
 	&dev_attr_mode_active.attr,
-	&dev_attr_fw_file_test.attr,
 	&dev_attr_stm_fts_cmd.attr,
 #ifdef USE_ONE_FILE_NODE
 	&dev_attr_feature_enable.attr,
@@ -2768,63 +2671,22 @@ static irqreturn_t fts_event_handler(int irq, void *ts_info)
 
 
 /**
-  *	Implement the fw update and initialization flow of the IC that should be
+  *	Implement the initialization flow of the IC that should be
   *executed at every boot up.
   *	The function perform a fw update of the IC in case of crc error or a new
   *fw version and then understand if the IC need to be re-initialized again.
   *	@return  OK if success or an error code which specify the type of error
   *	encountered
   */
-int fts_fw_update(struct fts_ts_info *info)
+int fts_init_flow(struct fts_ts_info *info)
 {
 	u8 error_to_search[4] = { EVT_TYPE_ERROR_CRC_CX_HEAD,
 				  EVT_TYPE_ERROR_CRC_CX,
 				  EVT_TYPE_ERROR_CRC_CX_SUB_HEAD,
 				  EVT_TYPE_ERROR_CRC_CX_SUB };
-	int retval = 0;
-	int retval1 = 0;
 	int ret;
-	int crc_status = 0;
 	int error = 0;
 	int init_type = NO_INIT;
-
-#if defined(PRE_SAVED_METHOD) || defined (COMPUTE_INIT_METHOD)
-	int keep_cx = 1;
-#else
-	int keep_cx = 0;
-#endif
-
-
-	logError(1, "%s Fw Auto Update is starting...\n", tag);
-
-	/* check CRC status */
-	ret = fts_crc_check();
-	if (ret > OK) {
-		logError(1, "%s %s: CRC Error or NO FW!\n", tag, __func__);
-		crc_status = ret;
-	} else {
-		crc_status = 0;
-		logError(1,
-			 "%s %s: NO CRC Error or Impossible to read CRC register!\n",
-			 tag, __func__);
-	}
-
-	retval = flashProcedure(PATH_FILE_FW, crc_status, keep_cx);
-	if ((retval & 0xFF000000) == ERROR_FLASH_PROCEDURE) {
-		logError(1,
-			 "%s %s: firmware update failed and retry! ERROR %08X\n",
-			 tag,
-			 __func__, retval);
-		fts_chip_powercycle(info);	/* power reset */
-		retval1 = flashProcedure(PATH_FILE_FW, crc_status, keep_cx);
-		if ((retval1 & 0xFF000000) == ERROR_FLASH_PROCEDURE) {
-			logError(1,
-				 "%s %s: firmware update failed again!  ERROR %08X\n",
-				 tag, __func__, retval1);
-			logError(1, "%s Fw Auto Update Failed!\n", tag);
-		}
-	}
-
 
 	logError(1, "%s %s: Verifying if CX CRC Error...\n", tag, __func__);
 	ret = fts_system_reset();
@@ -2855,25 +2717,10 @@ int fts_fw_update(struct fts_ts_info *info)
 				 "%s %s: Cx CRC Error FOUND! CRC ERROR = %02X\n",
 				 tag,
 				 __func__, ret);
-			/* this path of the code is used only in case there is a
-			 * CRC error in code or config which not allow the fw to
-			 * compute the CRC in the CX before */
-			/* the only way to recover is to have CX in fw file...
-			 * */
-#ifndef COMPUTE_INIT_METHOD
-			logError(1,
-				 "%s %s: Try to recovery with CX in fw file...\n",
-				 tag,
-				 __func__);
-			flashProcedure(PATH_FILE_FW, CRC_CX, 0);
-			logError(1, "%s %s: Refresh panel init data...\n", tag,
-				 __func__);
-#else
 			logError(1,
 				 "%s %s: Select Full Panel Init...\n", tag,
 				 __func__);
 			init_type = SPECIAL_FULL_PANEL_INIT;
-#endif
 		}
 	} else
 		logError(1,
@@ -2928,26 +2775,8 @@ int fts_fw_update(struct fts_ts_info *info)
 			 tag,
 			 error);
 
-	logError(1, "%s Fw Update Finished! error = %08X\n", tag, error);
 	return error;
 }
-
-#ifndef FW_UPDATE_ON_PROBE
-/**
-  *	Function called by the delayed workthread executed after the probe in
-  * order to perform the fw update flow
-  *	@see  fts_fw_update()
-  */
-static void fts_fw_update_auto(struct work_struct *work)
-{
-	struct delayed_work *fwu_work = container_of(work, struct delayed_work,
-						     work);
-	struct fts_ts_info *info = container_of(fwu_work, struct fts_ts_info,
-						fwu_work);
-
-	fts_fw_update(info);
-}
-#endif
 
 /* TODO: define if need to do the full mp at the boot */
 /**
@@ -4086,28 +3915,16 @@ static int fts_probe(struct spi_device *client)
 		goto ProbeErrorExit_6;
 	}
 
-#if defined(FW_UPDATE_ON_PROBE) && defined(FW_H_FILE)
-	logError(1, "%s FW Update and Sensing Initialization:\n", tag);
-	error = fts_fw_update(info);
+	logError(1, "%s Sensing Initialization:\n", tag);
+	error = fts_init_flow(info);
 	if (error < OK) {
 		logError(1,
-			 "%s Cannot execute fw upgrade the device ERROR %08X\n",
+			 "%s Cannot execute init flow ERROR %08X\n",
 			 tag,
 			 error);
 		error = -ENODEV;
-		goto ProbeErrorExit_7;
+		goto ProbeErrorExit_6;
 	}
-
-#else
-	logError(1, "%s SET Auto Fw Update:\n", tag);
-	info->fwu_workqueue = alloc_workqueue("fts-fwu-queue", WQ_UNBOUND |
-					      WQ_HIGHPRI | WQ_CPU_INTENSIVE, 1);
-	if (!info->fwu_workqueue) {
-		logError(1, "%s ERROR: Cannot create fwu work thread\n", tag);
-		goto ProbeErrorExit_7;
-	}
-	INIT_DELAYED_WORK(&info->fwu_work, fts_fw_update_auto);
-#endif
 
 	logError(1, "%s SET Device File Nodes:\n", tag);
 	/* sysfs stuff */
@@ -4116,22 +3933,11 @@ static int fts_probe(struct spi_device *client)
 	if (error) {
 		logError(1, "%s ERROR: Cannot create sysfs structure!\n", tag);
 		error = -ENODEV;
-		goto ProbeErrorExit_7;
+		goto ProbeErrorExit_6;
 	}
-
-#ifndef FW_UPDATE_ON_PROBE
-	queue_delayed_work(info->fwu_workqueue, &info->fwu_work,
-			   msecs_to_jiffies(EXP_FN_WORK_DELAY_MS));
-#endif
 
 	logError(1, "%s Probe Finished!\n", tag);
 	return OK;
-
-
-ProbeErrorExit_7:
-#ifdef FW_UPDATE_ON_PROBE
-	fb_unregister_client(&info->notifier);
-#endif
 
 ProbeErrorExit_6:
 	input_unregister_device(info->input_dev);
@@ -4188,9 +3994,6 @@ static void fts_remove(struct spi_device *client)
 
 	/* Remove the work thread */
 	destroy_workqueue(info->event_wq);
-#ifndef FW_UPDATE_ON_PROBE
-	destroy_workqueue(info->fwu_workqueue);
-#endif
 
 	fts_enable_reg(info, false);
 	fts_get_reg(info, false);
