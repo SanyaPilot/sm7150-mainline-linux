@@ -106,17 +106,14 @@ extern spinlock_t fts_int;
 
 static int fts_init_sensing(struct fts_ts_info *info);
 static int fts_mode_handler(struct fts_ts_info *info, int force);
-
-
 static int fts_chip_initialization(struct fts_ts_info *info, u8 init_type);
-
 
 /**
   * Release all the touches in the linux input subsystem
   * @param info pointer to fts_ts_info which contains info about the device and
   * its hw setup
   */
-void release_all_touches(struct fts_ts_info *info)
+static void release_all_touches(struct fts_ts_info *info)
 {
 	unsigned int type = MT_TOOL_FINGER;
 	int i;
@@ -221,7 +218,7 @@ static ssize_t fts_mode_active_show(struct device *dev,
   * @return OK if is possible to enable/disable feature, ERROR_OP_NOT_ALLOW
   * in case of any other conflict
   */
-int check_feature_feasibility(struct fts_ts_info *info, unsigned int feature)
+static int check_feature_feasibility(struct fts_ts_info *info, unsigned int feature)
 {
 	int res = OK;
 
@@ -1294,7 +1291,7 @@ static struct attribute *fts_attr_group[] = {
   * and its hw setup
   * @param key_code	button value
   */
-void fts_input_report_key(struct fts_ts_info *info, int key_code)
+static void fts_input_report_key(struct fts_ts_info *info, int key_code)
 {
 	mutex_lock(&info->input_report_mutex);
 	input_report_key(info->input_dev, key_code, 1);
@@ -2039,7 +2036,7 @@ static irqreturn_t fts_event_handler(int irq, void *ts_info)
   *	@return  OK if success or an error code which specify the type of error
   *	encountered
   */
-int fts_init_flow(struct fts_ts_info *info)
+static int fts_init_flow(struct fts_ts_info *info)
 {
 	u8 error_to_search[4] = { EVT_TYPE_ERROR_CRC_CX_HEAD,
 				  EVT_TYPE_ERROR_CRC_CX,
