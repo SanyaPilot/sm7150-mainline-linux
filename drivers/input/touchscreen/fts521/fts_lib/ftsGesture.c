@@ -346,7 +346,7 @@ int readGestureCoords(u8 *event)
 		gesture_coords_reported = event[5];	/* number of pairs
 							 * coords reported */
 		if (gesture_coords_reported > GESTURE_MAX_COORDS_PAIRS_REPORT) {
-			logError(1,
+			logError(0,
 				 "%s %s:  FW reported more than %d points for the gestures! Decreasing to %d\n",
 				 tag, __func__, gesture_coords_reported,
 				 GESTURE_MAX_COORDS_PAIRS_REPORT);
@@ -354,7 +354,7 @@ int readGestureCoords(u8 *event)
 				GESTURE_MAX_COORDS_PAIRS_REPORT;
 		}
 
-		logError(1, "%s %s: Offset: %08llX , coords pairs = %d\n", tag,
+		logError(0, "%s %s: Offset: %08llX , coords pairs = %d\n", tag,
 			 __func__, address, gesture_coords_reported);
 
 		res = fts_writeReadU8UX(FTS_CMD_FRAMEBUFFER_R, BITS_16, address,
@@ -383,7 +383,7 @@ int readGestureCoords(u8 *event)
 		}
 
 
-		logError(1, "%s %s: Reading Gesture Coordinates DONE!\n", tag,
+		logError(0, "%s %s: Reading Gesture Coordinates DONE!\n", tag,
 			 __func__);
 		return OK;
 	} else {
@@ -407,7 +407,7 @@ int getGestureCoords(u16 **x, u16 **y)
 {
 	*x = gesture_coordinates_x;
 	*y = gesture_coordinates_y;
-	logError(1,
+	logError(0,
 		 "%s %s: Number of gesture coordinates pairs returned = %d\n",
 		 tag,
 		 __func__, gesture_coords_reported);

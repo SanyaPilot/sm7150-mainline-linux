@@ -47,12 +47,8 @@
 #define FTS_TS_DRV_VERSION	"5.2.21" /* /< driver version string format */
 #define FTS_TS_DRV_VER		0x05021500	/* driver version u32 format */
 
-#define DEBUG	/* /< define to print more logs in the kernel log and better
-		 * follow the code flow */
-
-#define DRIVER_TEST	/* /< if defined allow to use and test special functions
-			 * of the driver and fts_lib from comand shell (usefull
-			 * for enginering/debug operations) */
+// #define DEBUG	/* /< define to print more logs in the kernel log and better
+// 		 * follow the code flow */
 
 #define PRE_SAVED_METHOD /* Pre-Saved Method used
 				* during production */
