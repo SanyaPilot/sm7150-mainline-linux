@@ -71,17 +71,17 @@ int openChannel(void *clt)
 	client = clt;
 #ifdef I2C_INTERFACE
 	I2CSAD = ((struct i2c_client *)clt)->addr;
-	logError(1, "%s openChannel: SAD: %02X\n", tag, I2CSAD);
+	logError(0, "%s openChannel: SAD: %02X\n", tag, I2CSAD);
 #else
-	logError(1, "%s %s: spi_master: flags = %04X !\n", tag, __func__,
+	logError(0, "%s %s: spi_master: flags = %04X !\n", tag, __func__,
 		 ((struct spi_device *)client)->master->flags);
-	logError(1,
+	logError(0,
 		 "%s %s: spi_device: max_speed = %d chip select = %02X bits_per_words = %d mode = %04X !\n",
 		 tag, __func__, ((struct spi_device *)client)->max_speed_hz,
 		 ((struct spi_device *)client)->chip_select,
 		 ((struct spi_device *)client)->bits_per_word,
 		 ((struct spi_device *)client)->mode);
-	logError(1, "%s openChannel: completed!\n", tag);
+	logError(0, "%s openChannel: completed!\n", tag);
 #endif
 	return OK;
 }
@@ -505,7 +505,7 @@ int fts_writeU8UX(u8 cmd, AddrSize addrSize, u64 address, u8 *data, int
 				finalCmd[i + 1] = (u8)((address >> ((addrSize -
 								     1 - i) *
 								    8)) & 0xFF);
-				logError(1, "%s %s: cmd[%d] = %02X\n", tag,
+				logError(0, "%s %s: cmd[%d] = %02X\n", tag,
 					 __func__, i + 1, finalCmd[i + 1]);
 			}
 

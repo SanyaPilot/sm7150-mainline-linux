@@ -94,7 +94,7 @@ int initCore(struct fts_ts_info *info)
 void setResetGpio(int gpio)
 {
 	reset_gpio = gpio;
-	logError(1, "%s setResetGpio: reset_gpio = %d\n", tag, reset_gpio);
+	logError(0, "%s setResetGpio: reset_gpio = %d\n", tag, reset_gpio);
 }
 
 /**
@@ -233,7 +233,7 @@ int pollForEvent(int *event_to_search, int event_bytes, u8 *readData, int
 				  DUMMY_FIFO) >= OK) {
 		/* Log of errors */
 		if (readData[0] == EVT_ID_ERROR) {
-			logError(1, "%s %s\n", tag, printHex("ERROR EVENT = ",
+			logError(0, "%s %s\n", tag, printHex("ERROR EVENT = ",
 							     readData,
 							     FIFO_EVENT_SIZE,
 							     temp));
@@ -249,7 +249,7 @@ int pollForEvent(int *event_to_search, int event_bytes, u8 *readData, int
 			}
 		} else {
 			if (readData[0] != EVT_ID_NOEVENT) {
-				logError(1, "%s %s\n", tag, printHex(
+				logError(0, "%s %s\n", tag, printHex(
 						 "READ EVENT = ", readData,
 						 FIFO_EVENT_SIZE,
 						 temp));
@@ -257,7 +257,7 @@ int pollForEvent(int *event_to_search, int event_bytes, u8 *readData, int
 			}
 			if (readData[0] == EVT_ID_CONTROLLER_READY &&
 			    event_to_search[0] != EVT_ID_CONTROLLER_READY) {
-				logError(1,
+				logError(0,
 					 "%s pollForEvent: Unmanned Controller Ready Event! Setting reset flags...\n",
 					 tag);
 				setSystemResetedUp(1);
@@ -602,32 +602,32 @@ int readSysInfo(int request)
 	index += 2;
 	u8ToU16(&data[index], &systemInfo.u16_fwVer);
 	index += 2;
-	logError(1, "%s FW VER = %04X\n", tag, systemInfo.u16_fwVer);
+	logError(0, "%s FW VER = %04X\n", tag, systemInfo.u16_fwVer);
 	u8ToU16(&data[index], &systemInfo.u16_svnRev);
 	index += 2;
-	logError(1, "%s SVN REV = %04X\n", tag, systemInfo.u16_svnRev);
+	logError(0, "%s SVN REV = %04X\n", tag, systemInfo.u16_svnRev);
 	u8ToU16(&data[index], &systemInfo.u16_cfgVer);
 	index += 2;
-	logError(1, "%s CONFIG VER = %04X\n", tag, systemInfo.u16_cfgVer);
+	logError(0, "%s CONFIG VER = %04X\n", tag, systemInfo.u16_cfgVer);
 	u8ToU16(&data[index], &systemInfo.u16_cfgProjectId);
 	index += 2;
-	logError(1, "%s CONFIG PROJECT ID = %04X\n", tag,
+	logError(0, "%s CONFIG PROJECT ID = %04X\n", tag,
 		 systemInfo.u16_cfgProjectId);
 	u8ToU16(&data[index], &systemInfo.u16_cxVer);
 	index += 2;
-	logError(1, "%s CX VER = %04X\n", tag, systemInfo.u16_cxVer);
+	logError(0, "%s CX VER = %04X\n", tag, systemInfo.u16_cxVer);
 	u8ToU16(&data[index], &systemInfo.u16_cxProjectId);
 	index += 2;
-	logError(1, "%s CX PROJECT ID = %04X\n", tag,
+	logError(0, "%s CX PROJECT ID = %04X\n", tag,
 		 systemInfo.u16_cxProjectId);
 	systemInfo.u8_cfgAfeVer = data[index++];
 	systemInfo.u8_cxAfeVer =  data[index++];
 	systemInfo.u8_panelCfgAfeVer = data[index++];
-	logError(1, "%s AFE VER: CFG = %02X - CX = %02X - PANEL = %02X\n", tag,
+	logError(0, "%s AFE VER: CFG = %02X - CX = %02X - PANEL = %02X\n", tag,
 		 systemInfo.u8_cfgAfeVer, systemInfo.u8_cxAfeVer,
 		 systemInfo.u8_panelCfgAfeVer);
 	systemInfo.u8_protocol = data[index++];
-	logError(1, "%s Protocol = %02X\n", tag, systemInfo.u8_protocol);
+	logError(0, "%s Protocol = %02X\n", tag, systemInfo.u8_protocol);
 	/* index+= 1;
 	 * reserved area */
 
@@ -636,7 +636,7 @@ int readSysInfo(int request)
 		systemInfo.u8_dieInfo[i] = data[index++];
 	/* logError(1, "%02X ", systemInfo.u8_dieInfo[i]); */
 	/* logError(1, "\n"); */
-	logError(1, "%s %s\n", tag, printHex("Die Info =  ",
+	logError(0, "%s %s\n", tag, printHex("Die Info =  ",
 					      systemInfo.u8_dieInfo,
 					      DIE_INFO_SIZE, temp));
 	memset(temp, 0, 256);
@@ -648,7 +648,7 @@ int readSysInfo(int request)
 	/* logError(1, "%02X ", systemInfo.u8_releaseInfo[i]); */
 	/* logError(1, "\n"); */
 
-	logError(1, "%s %s\n", tag, printHex("Release Info =  ",
+	logError(0, "%s %s\n", tag, printHex("Release Info =  ",
 					      systemInfo.u8_releaseInfo,
 					      RELEASE_INFO_SIZE, temp));
 	memset(temp, 0, 256);
@@ -661,13 +661,13 @@ int readSysInfo(int request)
 	index += 4;	/* skip reserved area */
 
 	systemInfo.u8_mpFlag = data[index++];
-	logError(1, "%s MP FLAG = %02X\n", tag,
+	logError(0, "%s MP FLAG = %02X\n", tag,
 		 systemInfo.u8_mpFlag);
 
 	index += 3 + 4; /* +3 remaining from mp flag address */
 
 	systemInfo.u8_ssDetScanSet = data[index];
-	logError(1, "%s SS Detect Scan Select = %d \n", tag,
+	logError(0, "%s SS Detect Scan Select = %d \n", tag,
 		 systemInfo.u8_ssDetScanSet);
 	index += 4;
 
@@ -678,17 +678,17 @@ int readSysInfo(int request)
 	logError(1, "%s Screen Resolution = %d x %d\n", tag,
 		 systemInfo.u16_scrResX, systemInfo.u16_scrResY);
 	systemInfo.u8_scrTxLen = data[index++];
-	logError(1, "%s TX Len = %d\n", tag, systemInfo.u8_scrTxLen);
+	logError(0, "%s TX Len = %d\n", tag, systemInfo.u8_scrTxLen);
 	systemInfo.u8_scrRxLen = data[index++];
-	logError(1, "%s RX Len = %d\n", tag, systemInfo.u8_scrRxLen);
+	logError(0, "%s RX Len = %d\n", tag, systemInfo.u8_scrRxLen);
 	systemInfo.u8_keyLen = data[index++];
-	logError(1, "%s Key Len = %d\n", tag, systemInfo.u8_keyLen);
+	logError(0, "%s Key Len = %d\n", tag, systemInfo.u8_keyLen);
 	systemInfo.u8_forceLen = data[index++];
-	logError(1, "%s Force Len = %d\n", tag, systemInfo.u8_forceLen);
+	logError(0, "%s Force Len = %d\n", tag, systemInfo.u8_forceLen);
 	index += 8;	
 
 	u8ToU32(&data[index], &systemInfo.u32_productionTimestamp);
-	logError(1, "%s Production Timestamp = %08X\n",
+	logError(0, "%s Production Timestamp = %08X\n",
 	tag, systemInfo.u32_productionTimestamp);
 
 	index += 32;	/* skip reserved area */
@@ -788,7 +788,7 @@ int readSysInfo(int request)
 	u8ToU16(&data[index], &systemInfo.u16_ssDetBaselineAddr);
 	index += 2;
 
-	logError(1, "%s Parsed %d bytes!\n", tag, index);
+	logError(0, "%s Parsed %d bytes!\n", tag, index);
 
 
 	if (index != SYS_INFO_SIZE) {
@@ -798,7 +798,7 @@ int readSysInfo(int request)
 		return ERROR_OP_NOT_ALLOW;
 	}
 
-	logError(1, "%s System Info Read DONE!\n", tag);
+	logError(0, "%s System Info Read DONE!\n", tag);
 	return OK;
 
 FAIL:

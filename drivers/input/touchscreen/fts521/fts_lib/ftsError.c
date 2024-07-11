@@ -103,7 +103,7 @@ int dumpErrorInfo(u8 *outBuf, int size)
 				data, ERROR_DUMP_ROW_SIZE * ERROR_DUMP_COL_SIZE,
 				DUMMY_FRAMEBUFFER);
 	if (ret < OK) {
-		logError(1, "%s %s: reading data ERROR %08X\n", tag, __func__,
+		logError(0, "%s %s: reading data ERROR %08X\n", tag, __func__,
 			 ret);
 		return ret;
 	} else {
@@ -115,14 +115,14 @@ int dumpErrorInfo(u8 *outBuf, int size)
 			logError(0, "%s %s: error info copied in the buffer!\n",
 				 tag, __func__);
 		}
-		logError(1, "%s %s: Error Info =\n", tag, __func__);
+		logError(0, "%s %s: Error Info =\n", tag, __func__);
 		u8ToU32(data, &sign);
 		if (sign != ERROR_DUMP_SIGNATURE)
-			logError(1,
+			logError(0,
 				 "%s %s: Wrong Error Signature! Data may be invalid!\n",
 				 tag, __func__);
 		else
-			logError(1,
+			logError(0,
 				 "%s %s: Error Signature OK! Data are valid!\n",
 				 tag,
 				 __func__);
@@ -130,11 +130,11 @@ int dumpErrorInfo(u8 *outBuf, int size)
 		for (i = 0; i < ERROR_DUMP_ROW_SIZE * ERROR_DUMP_COL_SIZE;
 		     i++) {
 			if (i % ERROR_DUMP_COL_SIZE == 0)
-				logError(1, KERN_ERR "\n%s %s: %d) ", tag,
+				logError(0, KERN_ERR "\n%s %s: %d) ", tag,
 					 __func__, i / ERROR_DUMP_COL_SIZE);
-			logError(1, "%02X ", data[i]);
+			logError(0, "%02X ", data[i]);
 		}
-		logError(1, "\n");
+		logError(0, "\n");
 
 		logError(0, "%s %s: dump of error info FINISHED!\n", tag,
 			 __func__);
@@ -163,7 +163,7 @@ int errorHandler(u8 *event, int size)
 
 	if (info != NULL && event != NULL && size > 1 && event[0] ==
 	    EVT_ID_ERROR) {
-		logError(1, "%s errorHandler: Starting handling...\n", tag);
+		logError(0, "%s errorHandler: Starting handling...\n", tag);
 		addErrorIntoList(event, size);
 		switch (event[1]) {	/* TODO: write an error log for
 					 * undefined command subtype 0xBA */
@@ -229,10 +229,10 @@ int errorHandler(u8 *event, int size)
 			break;
 
 		default:
-			logError(1, "%s errorHandler: No Action taken!\n", tag);
+			logError(0, "%s errorHandler: No Action taken!\n", tag);
 			break;
 		}
-		logError(1, "%s errorHandler: handling Finished! res = %08X\n",
+		logError(0, "%s errorHandler: handling Finished! res = %08X\n",
 			 tag, res);
 		return res;
 	} else {
@@ -319,7 +319,7 @@ int pollErrorList(int *event_to_search, int event_bytes)
 	int i = 0, j = 0, find = 0;
 	int count = getErrorListCount();
 
-	logError(1, "%s Starting to poll ErrorList...\n", tag);
+	logError(0, "%s Starting to poll ErrorList...\n", tag);
 	while (find != 1 && i < count) {
 		find = 1;
 		for (j = 0; j < event_bytes; j++) {
@@ -333,10 +333,10 @@ int pollErrorList(int *event_to_search, int event_bytes)
 		i++;
 	}
 	if (find == 1) {
-		logError(1, "%s Error Found into ErrorList!\n", tag);
+		logError(0, "%s Error Found into ErrorList!\n", tag);
 		return i - 1;	/* there is i++ at the end of the while */
 	} else {
-		logError(1, "%s Error Not Found into ErrorList! ERROR %08X\n",
+		logError(0, "%s Error Not Found into ErrorList! ERROR %08X\n",
 			 tag, ERROR_TIMEOUT);
 		return ERROR_TIMEOUT;
 	}
@@ -356,7 +356,7 @@ int pollForErrorType(u8 *list, int size)
 	int i = 0, j = 0, find = 0;
 	int count = getErrorListCount();
 
-	logError(1, "%s %s: Starting to poll ErrorList... count = %d\n", tag,
+	logError(0, "%s %s: Starting to poll ErrorList... count = %d\n", tag,
 		 __func__, count);
 	while (find != 1 && i < count) {
 		for (j = 0; j < size; j++) {
@@ -368,11 +368,11 @@ int pollForErrorType(u8 *list, int size)
 		i++;
 	}
 	if (find == 1) {
-		logError(1, "%s %s: Error Type %02X into ErrorList!\n", tag,
+		logError(0, "%s %s: Error Type %02X into ErrorList!\n", tag,
 			 __func__, list[j]);
 		return list[j];
 	} else {
-		logError(1,
+		logError(0,
 			 "%s %s: Error Type Not Found into ErrorList! ERROR %08X\n",
 			 tag, __func__, ERROR_TIMEOUT);
 		return ERROR_TIMEOUT;

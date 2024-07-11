@@ -202,7 +202,7 @@ static ssize_t fts_mode_active_show(struct device *dev,
 {
 	struct fts_ts_info *info = dev_get_drvdata(dev);
 
-	logError(1, "%s Current mode active = %08X\n", tag, info->mode);
+	logError(0, "%s Current mode active = %08X\n", tag, info->mode);
 	return snprintf(buf, 14, "{ %08X }\n", info->mode);
 }
 
@@ -398,7 +398,7 @@ int check_feature_feasibility(struct fts_ts_info *info, unsigned int feature)
 		break;
 
 	default:
-		logError(1, "%s %s: Feature Allowed!\n", tag, __func__);
+		logError(0, "%s %s: Feature Allowed!\n", tag, __func__);
 	}
 
 	return res;
@@ -1422,7 +1422,7 @@ void fts_input_report_key(struct fts_ts_info *info, int key_code)
 static void fts_nop_event_handler(struct fts_ts_info *info, unsigned
 				  char *event)
 {
-	logError(1,
+	logError(0,
 		 "%s %s Doing nothing for event = %02X %02X %02X %02X %02X %02X %02X %02X\n",
 		 tag, __func__, event[0], event[1], event[2], event[3],
 		 event[4],
@@ -1502,7 +1502,7 @@ static void fts_enter_pointer_event_handler(struct fts_ts_info *info, unsigned
 
 	case TOUCH_TYPE_INVALID:
 	default:
-		logError(1, "%s  %s : Invalid touch type = %d ! No Report...\n",
+		logError(0, "%s  %s : Invalid touch type = %d ! No Report...\n",
 			 tag, __func__, touchType);
 		goto no_report;
 	}
@@ -1570,7 +1570,7 @@ static void fts_leave_pointer_event_handler(struct fts_ts_info *info, unsigned
 
 	case TOUCH_TYPE_INVALID:
 	default:
-		logError(1, "%s  %s : Invalid touch type = %d ! No Report...\n",
+		logError(0, "%s  %s : Invalid touch type = %d ! No Report...\n",
 			 tag, __func__, touchType);
 		return;
 	}
@@ -1679,7 +1679,7 @@ static void fts_status_event_handler(struct fts_ts_info *info, unsigned
 {
 	switch (event[1]) {
 	case EVT_TYPE_STATUS_ECHO:
-		logError(1,
+		logError(0,
 			 "%s %s Echo event of command = %02X %02X %02X %02X %02X %02X\n",
 			 tag, __func__, event[2], event[3], event[4], event[5],
 			 event[6],
@@ -1689,7 +1689,7 @@ static void fts_status_event_handler(struct fts_ts_info *info, unsigned
 	case EVT_TYPE_STATUS_FORCE_CAL:
 		switch (event[2]) {
 		case 0x00:
-			logError(1,
+			logError(0,
 				 "%s %s Continuous frame drop Force cal = %02X %02X %02X %02X %02X %02X\n",
 				 tag, __func__, event[2], event[3], event[4],
 				 event[5],
@@ -1697,7 +1697,7 @@ static void fts_status_event_handler(struct fts_ts_info *info, unsigned
 			break;
 
 		case 0x01:
-			logError(1,
+			logError(0,
 				 "%s %s Sense On Force cal = %02X %02X %02X %02X %02X %02X\n",
 				 tag, __func__, event[2], event[3], event[4],
 				 event[5],
@@ -1705,7 +1705,7 @@ static void fts_status_event_handler(struct fts_ts_info *info, unsigned
 			break;
 
 		case 0x02:
-			logError(1,
+			logError(0,
 				 "%s %s Host command Force cal = %02X %02X %02X %02X %02X %02X\n",
 				 tag, __func__, event[2], event[3], event[4],
 				 event[5],
@@ -1713,7 +1713,7 @@ static void fts_status_event_handler(struct fts_ts_info *info, unsigned
 			break;
 			
 		case 0x10:
-			logError(1,
+			logError(0,
 				 "%s %s Mutual frame drop Force cal = %02X %02X %02X %02X %02X %02X\n",
 				 tag, __func__, event[2], event[3], event[4],
 				 event[5],
@@ -1721,7 +1721,7 @@ static void fts_status_event_handler(struct fts_ts_info *info, unsigned
 			break;
 
 		case 0x11:
-			logError(1,
+			logError(0,
 				 "%s %s Mutual pure raw Force cal = %02X %02X %02X %02X %02X %02X\n",
 				 tag, __func__, event[2], event[3], event[4],
 				 event[5],
@@ -1729,7 +1729,7 @@ static void fts_status_event_handler(struct fts_ts_info *info, unsigned
 			break;	
 
 		case 0x20:
-			logError(1,
+			logError(0,
 				 "%s %s SS detect negative Force cal = %02X %02X %02X %02X %02X %02X\n",
 				 tag, __func__, event[2], event[3], event[4],
 				 event[5],
@@ -1737,7 +1737,7 @@ static void fts_status_event_handler(struct fts_ts_info *info, unsigned
 			break;
 
 		case 0x30:
-			logError(1,
+			logError(0,
 				 "%s %s invalid Mutual soft Force cal = %02X %02X %02X %02X %02X %02X\n",
 				 tag, __func__, event[2], event[3], event[4],
 				 event[5],
@@ -1745,7 +1745,7 @@ static void fts_status_event_handler(struct fts_ts_info *info, unsigned
 			break;
 
 		case 0x31:
-			logError(1,
+			logError(0,
 				 "%s %s invalid Self soft Force cal = %02X %02X %02X %02X %02X %02X\n",
 				 tag, __func__, event[2], event[3], event[4],
 				 event[5],
@@ -1753,7 +1753,7 @@ static void fts_status_event_handler(struct fts_ts_info *info, unsigned
 			break;
 
 		case 0x32:
-			logError(1,
+			logError(0,
 				 "%s %s ss invalid island soft Force cal = %02X %02X %02X %02X %02X %02X\n",
 				 tag, __func__, event[2], event[3], event[4],
 				 event[5],
@@ -1761,7 +1761,7 @@ static void fts_status_event_handler(struct fts_ts_info *info, unsigned
 			break;
 
 		default:
-			logError(1,
+			logError(0,
 				 "%s %s Force cal = %02X %02X %02X %02X %02X %02X\n",
 				 tag, __func__, event[2], event[3], event[4],
 				 event[5],
@@ -1772,7 +1772,7 @@ static void fts_status_event_handler(struct fts_ts_info *info, unsigned
 	case EVT_TYPE_STATUS_FRAME_DROP:
 		switch (event[2]) {
 		case 0x01:
-			logError(1,
+			logError(0,
 				 "%s %s Frame drop noisy frame = %02X %02X %02X %02X %02X %02X\n",
 				 tag, __func__, event[2], event[3], event[4],
 				 event[5],
@@ -1780,7 +1780,7 @@ static void fts_status_event_handler(struct fts_ts_info *info, unsigned
 			break;
 
 		case 0x02:
-			logError(1,
+			logError(0,
 				 "%s %s Frame drop bad R = %02X %02X %02X %02X %02X %02X\n",
 				 tag, __func__, event[2], event[3], event[4],
 				 event[5],
@@ -1788,7 +1788,7 @@ static void fts_status_event_handler(struct fts_ts_info *info, unsigned
 			break;
 
 		case 0x03:
-			logError(1,
+			logError(0,
 				 "%s %s Frame drop invalid processing state = %02X %02X %02X %02X %02X %02X\n",
 				 tag, __func__, event[2], event[3], event[4],
 				 event[5],
@@ -1796,7 +1796,7 @@ static void fts_status_event_handler(struct fts_ts_info *info, unsigned
 			break;
 
 		default:
-			logError(1,
+			logError(0,
 				 "%s %s Frame drop = %02X %02X %02X %02X %02X %02X\n",
 				 tag, __func__, event[2], event[3], event[4],
 				 event[5],
@@ -1806,13 +1806,13 @@ static void fts_status_event_handler(struct fts_ts_info *info, unsigned
 
 	case EVT_TYPE_STATUS_SS_RAW_SAT:
 		if (event[2] == 1)
-			logError(1,
+			logError(0,
 				 "%s %s SS Raw Saturated = %02X %02X %02X %02X %02X %02X\n",
 				 tag, __func__, event[2], event[3], event[4],
 				 event[5],
 				 event[6], event[7]);
 		else
-			logError(1,
+			logError(0,
 				 "%s %s SS Raw No more Saturated = %02X %02X %02X %02X %02X %02X\n",
 				 tag, __func__, event[2], event[3], event[4],
 				 event[5],
@@ -1821,13 +1821,13 @@ static void fts_status_event_handler(struct fts_ts_info *info, unsigned
 
 	case EVT_TYPE_STATUS_WATER:
 		if (event[2] == 1)
-			logError(1,
+			logError(0,
 				 "%s %s Enter Water mode = %02X %02X %02X %02X %02X %02X\n",
 				 tag, __func__, event[2], event[3], event[4],
 				 event[5],
 				 event[6], event[7]);
 		else
-			logError(1,
+			logError(0,
 				 "%s %s Exit Water mode = %02X %02X %02X %02X %02X %02X\n",
 				 tag, __func__, event[2], event[3], event[4],
 				 event[5],
@@ -1835,7 +1835,7 @@ static void fts_status_event_handler(struct fts_ts_info *info, unsigned
 		break;
 
 	default:
-		logError(1,
+		logError(0,
 			 "%s %s Received unhandled status event = %02X %02X %02X %02X %02X %02X %02X %02X\n",
 			 tag, __func__, event[0], event[1], event[2], event[3],
 			 event[4],
@@ -2063,9 +2063,9 @@ static void fts_user_report_event_handler(struct fts_ts_info *info, unsigned
 
 	case EVT_TYPE_USER_PROXIMITY:
 		if (event[2] == 0)
-			logError(1, "%s %s No proximity!\n", tag, __func__);
+			logError(0, "%s %s No proximity!\n", tag, __func__);
 		else
-			logError(1, "%s %s Proximity Detected!\n", tag,
+			logError(0, "%s %s Proximity Detected!\n", tag,
 				 __func__);
 		break;
 
@@ -2075,7 +2075,7 @@ static void fts_user_report_event_handler(struct fts_ts_info *info, unsigned
 		break;
 #endif
 	default:
-		logError(1,
+		logError(0,
 			 "%s %s Received unhandled user report event = %02X %02X %02X %02X %02X %02X %02X %02X\n",
 			 tag, __func__, event[0], event[1], event[2], event[3],
 			 event[4],
@@ -2159,20 +2159,20 @@ int fts_init_flow(struct fts_ts_info *info)
 	int error = 0;
 	u8 init_type = 0;
 
-	logError(1, "%s %s: Verifying if CX CRC Error...\n", tag, __func__);
+	logError(0, "%s %s: Verifying if CX CRC Error...\n", tag, __func__);
 	ret = fts_system_reset();
 	if (ret >= OK) {
 		ret = pollForErrorType(error_to_search, 4);
 		if (ret < OK) {
-			logError(1, "%s %s: No Cx CRC Error Found!\n", tag,
+			logError(0, "%s %s: No CX CRC Error Found!\n", tag,
 				 __func__);
-			logError(1, "%s %s: Verifying if Panel CRC Error...\n",
+			logError(0, "%s %s: Verifying if Panel CRC Error...\n",
 				 tag, __func__);
 			error_to_search[0] = EVT_TYPE_ERROR_CRC_PANEL_HEAD;
 			error_to_search[1] =  EVT_TYPE_ERROR_CRC_PANEL;
 			ret = pollForErrorType(error_to_search, 2);
 			if (ret < OK) {
-				logError(1,
+				logError(0,
 					 "%s %s: No Panel CRC Error Found!\n",
 					 tag,
 					 __func__);
@@ -2185,7 +2185,7 @@ int fts_init_flow(struct fts_ts_info *info)
 			}
 		} else {
 			logError(1,
-				 "%s %s: Cx CRC Error FOUND! CRC ERROR = %02X\n",
+				 "%s %s: CX CRC Error FOUND! CRC ERROR = %02X\n",
 				 tag,
 				 __func__, ret);
 			logError(1,
@@ -2342,7 +2342,7 @@ static int fts_interrupt_install(struct fts_ts_info *info)
 	/* disable interrupts in any case */
 	error = fts_disableInterrupt();
 
-	logError(1, "%s Interrupt Mode\n", tag);
+	logError(0, "%s Interrupt Mode\n", tag);
 	if (request_threaded_irq(info->client->irq, NULL, fts_event_handler,
 			info->board->irq_flags, FTS_TS_DRV_NAME, info)) {
 		logError(1, "%s Request irq failed\n", tag);
@@ -2448,7 +2448,7 @@ static int fts_init(struct fts_ts_info *info)
 	}
 	msleep(1);	/* wait for the GPIO to stabilize */
 #endif
-	logError(1, "%s Reading chip id\n", tag);
+	logError(0, "%s Reading chip id\n", tag);
 	error = fts_writeReadU8UX(FTS_CMD_HW_REG_R, ADDR_SIZE_HW_REG,
 					    ADDR_DCHIP_ID, readData, 2, DUMMY_FIFO);
 	logError(1, "%s chip id: %02X %02X!\n",tag, readData[0], readData[1]);
@@ -2459,7 +2459,7 @@ static int fts_init(struct fts_ts_info *info)
 		return ERROR_OP_NOT_ALLOW;
 	}
 	else
-		logError(1, "%s chip id read successful!\n", tag);
+		logError(0, "%s chip id read successful!\n", tag);
 
 
 	error = fts_system_reset();
@@ -2469,7 +2469,7 @@ static int fts_init(struct fts_ts_info *info)
 		return error;
 	} else {
 		if (error == (ERROR_TIMEOUT | ERROR_SYSTEM_RESET_FAIL)) {
-			logError(1, "%s Setting default Sys INFO!\n", tag);
+			logError(0, "%s Setting default Sys INFO!\n", tag);
 			error = defaultSysInfo(0);
 		} else {
 			error = readSysInfo(0);	/* system reset OK */
@@ -2497,8 +2497,8 @@ int fts_chip_powercycle(struct fts_ts_info *info)
 {
 	int error = 0;
 
-	logError(1, "%s %s: Power Cycle Starting...\n", tag, __func__);
-	logError(1, "%s %s: Disabling IRQ...\n", tag, __func__);
+	logError(0, "%s %s: Power Cycle Starting...\n", tag, __func__);
+	logError(0, "%s %s: Disabling IRQ...\n", tag, __func__);
 	/* if IRQ pin is short with DVDD a call to the ISR will triggered when
 	  * the regulator is turned off if IRQ not disabled */
 	fts_disableInterrupt();
@@ -2506,14 +2506,14 @@ int fts_chip_powercycle(struct fts_ts_info *info)
 	if (info->vdd_reg) {
 		error = regulator_disable(info->vdd_reg);
 		if (error < 0)
-			logError(1, "%s %s: Failed to disable DVDD regulator\n",
+			logError(0, "%s %s: Failed to disable DVDD regulator\n",
 				 tag, __func__);
 	}
 
 	if (info->avdd_reg) {
 		error = regulator_disable(info->avdd_reg);
 		if (error < 0)
-			logError(1, "%s %s: Failed to disable AVDD regulator\n",
+			logError(0, "%s %s: Failed to disable AVDD regulator\n",
 				 tag, __func__);
 	}
 
@@ -2526,7 +2526,7 @@ int fts_chip_powercycle(struct fts_ts_info *info)
 	if (info->vdd_reg) {
 		error = regulator_enable(info->vdd_reg);
 		if (error < 0)
-			logError(1, "%s %s: Failed to enable DVDD regulator\n",
+			logError(0, "%s %s: Failed to enable DVDD regulator\n",
 				 tag, __func__);
 	}
 
@@ -2535,7 +2535,7 @@ int fts_chip_powercycle(struct fts_ts_info *info)
 	if (info->avdd_reg) {
 		error = regulator_enable(info->avdd_reg);
 		if (error < 0)
-			logError(1, "%s %s: Failed to enable AVDD regulator\n",
+			logError(0, "%s %s: Failed to enable AVDD regulator\n",
 				 tag, __func__);
 	}
 
@@ -2551,7 +2551,7 @@ int fts_chip_powercycle(struct fts_ts_info *info)
 
 	release_all_touches(info);
 
-	logError(1, "%s %s: Power Cycle Finished! ERROR CODE = %08x\n", tag,
+	logError(0, "%s %s: Power Cycle Finished! ERROR CODE = %08x\n", tag,
 		 __func__, error);
 	setSystemResetedUp(1);
 	setSystemResetedDown(1);
@@ -2673,10 +2673,10 @@ static int fts_mode_handler(struct fts_ts_info *info, int force)
 			if (ret >= OK && info->glove_enabled == FEAT_ENABLE) {
 				fromIDtoMask(FEAT_SEL_GLOVE, (u8 *)&info->mode,
 					     sizeof(info->mode));
-				logError(1, "%s %s: GLOVE_MODE Enabled!\n", tag,
+				logError(0, "%s %s: GLOVE_MODE Enabled!\n", tag,
 					 __func__);
 			} else
-				logError(1, "%s %s: GLOVE_MODE Disabled!\n",
+				logError(0, "%s %s: GLOVE_MODE Disabled!\n",
 					 tag, __func__);
 		}
 
@@ -2698,10 +2698,10 @@ static int fts_mode_handler(struct fts_ts_info *info, int force)
 			if (ret >= OK && info->cover_enabled == FEAT_ENABLE) {
 				fromIDtoMask(FEAT_SEL_COVER, (u8 *)&info->mode,
 					     sizeof(info->mode));
-				logError(1, "%s %s: COVER_MODE Enabled!\n", tag,
+				logError(0, "%s %s: COVER_MODE Enabled!\n", tag,
 					 __func__);
 			} else
-				logError(1, "%s %s: COVER_MODE Disabled!\n",
+				logError(0, "%s %s: COVER_MODE Disabled!\n",
 					 tag, __func__);
 		}
 #endif
@@ -2723,10 +2723,10 @@ static int fts_mode_handler(struct fts_ts_info *info, int force)
 				fromIDtoMask(FEAT_SEL_CHARGER,
 					     (u8 *)&info->mode,
 					     sizeof(info->mode));
-				logError(1, "%s %s: CHARGER_MODE Enabled!\n",
+				logError(0, "%s %s: CHARGER_MODE Enabled!\n",
 					 tag, __func__);
 			} else
-				logError(1, "%s %s: CHARGER_MODE Disabled!\n",
+				logError(0, "%s %s: CHARGER_MODE Disabled!\n",
 					 tag, __func__);
 		}
 #endif
@@ -2748,10 +2748,10 @@ static int fts_mode_handler(struct fts_ts_info *info, int force)
 			if (ret >= OK && info->grip_enabled == FEAT_ENABLE) {
 				fromIDtoMask(FEAT_SEL_GRIP, (u8 *)&info->mode,
 					     sizeof(info->mode));
-				logError(1, "%s %s: GRIP_MODE Enabled!\n", tag,
+				logError(0, "%s %s: GRIP_MODE Enabled!\n", tag,
 					 __func__);
 			} else
-				logError(1, "%s %s: GRIP_MODE Disabled!\n", tag,
+				logError(0, "%s %s: GRIP_MODE Disabled!\n", tag,
 					 __func__);
 		}
 #endif
@@ -2839,7 +2839,7 @@ static void fts_suspend_work(struct work_struct *work)
 	info->sensor_sleep = true;
 
 	if (info->gesture_enabled) {
-		logError(1, "%s %s: enter gesture mode!\n", tag, __func__);
+		logError(0, "%s %s: enter gesture mode!\n", tag, __func__);
 		fts_enableInterrupt();
 	}
 }
@@ -3263,7 +3263,7 @@ static int fts_probe(struct spi_device *client)
 #endif
 
 
-	logError(1, "%s SET Device driver INFO:\n", tag);
+	logError(0, "%s SET Device driver INFO:\n", tag);
 
 
 	info = kzalloc(sizeof(struct fts_ts_info), GFP_KERNEL);
@@ -3292,7 +3292,7 @@ static int fts_probe(struct spi_device *client)
 		parse_dt(&client->dev, info->board);
 	}
 
-	logError(1, "%s SET Regulators:\n", tag);
+	logError(0, "%s SET Regulators:\n", tag);
 	retval = fts_get_reg(info, true);
 	if (retval < 0) {
 		logError(1, "%s ERROR: %s: Failed to get regulators\n", tag,
@@ -3307,7 +3307,7 @@ static int fts_probe(struct spi_device *client)
 		goto ProbeErrorExit_2;
 	}
 
-	logError(1, "%s SET GPIOS:\n", tag);
+	logError(0, "%s SET GPIOS:\n", tag);
 	retval = fts_set_gpio(info);
 	if (retval < 0) {
 		logError(1, "%s %s: ERROR Failed to set up GPIO's\n", tag,
@@ -3316,7 +3316,7 @@ static int fts_probe(struct spi_device *client)
 	}
 
 #ifdef CONFIG_PINCTRL
-	logError(1, "%s %s: Pinctrl Init!\n", tag, __func__);
+	logError(0, "%s %s: Pinctrl Init!\n", tag, __func__);
 	error = fts_pinctrl_init(info);
 
 	if (!error && info->ts_pinctrl) {
@@ -3332,7 +3332,7 @@ static int fts_probe(struct spi_device *client)
 
 	info->client->irq = gpio_to_irq(info->board->irq_gpio);
 
-	logError(1, "%s SET Event Handler:\n", tag);
+	logError(0, "%s SET Event Handler:\n", tag);
 	device_init_wakeup(&client->dev, 1);
 	info->event_wq = alloc_workqueue("fts-event-queue", WQ_UNBOUND |
 					 WQ_HIGHPRI | WQ_CPU_INTENSIVE, 1);
@@ -3347,7 +3347,7 @@ static int fts_probe(struct spi_device *client)
 
 	info->dev = &info->client->dev;
 
-	logError(1, "%s SET Input Device Property:\n", tag);
+	logError(0, "%s SET Input Device Property:\n", tag);
 	info->input_dev = input_allocate_device();
 	if (!info->input_dev) {
 		logError(1, "%s ERROR: No such input device defined!\n", tag);
@@ -3462,7 +3462,7 @@ static int fts_probe(struct spi_device *client)
 	info->resume_bit = 1;
 	info->notifier = fts_noti_block;
 
-	logError(1, "%s Init Core Lib:\n", tag);
+	logError(0, "%s Init Core Lib:\n", tag);
 	initCore(info);
 	/* init hardware device */
 	logError(1, "%s Device Initialization:\n", tag);
@@ -3485,7 +3485,7 @@ static int fts_probe(struct spi_device *client)
 		goto ProbeErrorExit_6;
 	}
 
-	logError(1, "%s SET Device File Nodes:\n", tag);
+	logError(0, "%s SET Device File Nodes:\n", tag);
 	/* sysfs stuff */
 	info->attrs.attrs = fts_attr_group;
 	error = sysfs_create_group(&client->dev.kobj, &info->attrs);
