@@ -963,77 +963,6 @@ int fts_enableInterrupt(void)
 }
 
 /**
-  *	Check if there is a crc error in the IC which prevent the fw to run.
-  *	@return  OK if no CRC error, or a number >OK according the CRC error
-  * found
-  */
-int fts_crc_check(void)
-{
-	u8 val;
-	u8 crc_status;
-	int res;
-	u8 error_to_search[6] = { EVT_TYPE_ERROR_CRC_CFG_HEAD,
-				  EVT_TYPE_ERROR_CRC_CFG,
-				  EVT_TYPE_ERROR_CRC_CX,
-				  EVT_TYPE_ERROR_CRC_CX_HEAD,
-				  EVT_TYPE_ERROR_CRC_CX_SUB,
-				  EVT_TYPE_ERROR_CRC_CX_SUB_HEAD };
-
-
-	res = fts_writeReadU8UX(FTS_CMD_HW_REG_R, ADDR_SIZE_HW_REG, ADDR_CRC,
-				&val, 1, DUMMY_HW_REG);
-	/* read 2 bytes because the first one is a dummy byte! */
-	if (res < OK) {
-		logError(1, "%s %s Cannot read crc status ERROR %08X\n", tag,
-			 __func__, res);
-		return res;
-	}
-
-	crc_status = val & CRC_MASK;
-	if (crc_status != OK) {	/* CRC error if crc_status!=0 */
-		logError(1, "%s %s CRC ERROR = %02X\n", tag, __func__,
-			 crc_status);
-		return CRC_CODE;
-	}
-
-	logError(1, "%s %s: Verifying if Config CRC Error...\n", tag, __func__);
-	res = fts_system_reset();
-	if (res >= OK) {
-		res = pollForErrorType(error_to_search, 2);
-		if (res < OK) {
-			logError(1, "%s %s: No Config CRC Error Found!\n", tag,
-				 __func__);
-			logError(1, "%s %s: Verifying if Cx CRC Error...\n",
-				 tag, __func__);
-			res = pollForErrorType(&error_to_search[2], 4);
-			if (res < OK) {
-				logError(1, "%s %s: No Cx CRC Error Found!\n",
-					 tag, __func__);
-				return OK;
-			} else {
-				logError(1,
-					 "%s %s: Cx CRC Error found! CRC ERROR = %02X\n",
-					 tag, __func__, res);
-				return CRC_CX;
-			}
-		} else {
-			logError(1,
-				 "%s %s: Config CRC Error found! CRC ERROR = %02X\n",
-				 tag, __func__, res);
-			return CRC_CONFIG;
-		}
-	} else {
-		logError(1,
-			 "%s %s: Error while executing system reset! ERROR %08X\n",
-			 tag,
-			 __func__, res);
-		return res;
-	}
-
-	return OK;
-}
-
-/**
   * Request a host data and use the sync method to understand when the FW load
   * it
   * @param type the type ID of host data to load (@link load_opt Load Host Data
@@ -1122,41 +1051,4 @@ int requestSyncFrame(u8 type)
 	logError(1, "%s %s: Request Data failed! ERROR %08X\n", tag, __func__,
 		 ret);
 	return ret;
-}
-
-
-/**
-  * Save MP flag value into the flash
-  * @param mpflag Value to write in the MP Flag field
-  * @return OK if success or an error code which specify the type of error
-  */
-int saveMpFlag(u8 mpflag)
-{
-	int ret;
-
-	logError(1, "%s %s: Saving MP Flag = %02X\n", tag, __func__, mpflag);
-	ret = writeSysCmd(SYS_CMD_MP_FLAG, &mpflag, 1);
-	if (ret < OK) {
-		logError(1, "%s %s: Error while writing MP flag on ram... ERROR %08X\n",
-			tag, __func__, ret);
-		return ret;
-	}
-
-	mpflag =  SAVE_PANEL_CONF;
-	ret = writeSysCmd(SYS_CMD_SAVE_FLASH, &mpflag, 1);
-	if (ret < OK) {
-		logError(1, "%s %s: Error while saving MP flag on flash... ERROR %08X\n",
-			tag, __func__, ret);
-		return ret;
-	}
-
-	ret = readSysInfo(1);
-	if (ret < OK) {
-		logError(1, "%s %s: Error while refreshing SysInfo... ERROR %08X\n",
-			tag, __func__, ret);
-		return ret;
-	}
-
-	logError(1, "%s %s: Saving MP Flag OK!\n", tag, __func__);
-	return OK;
 }

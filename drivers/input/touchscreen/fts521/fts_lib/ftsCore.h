@@ -222,8 +222,6 @@ int fts_disableInterrupt(void);
 int fts_disableInterruptNoSync(void);
 int fts_resetDisableIrqCount(void);
 int fts_enableInterrupt(void);
-int fts_crc_check(void);
 int requestSyncFrame(u8 type);
-int saveMpFlag(u8 mpflag);
 
 #endif	/* FTS_CORE_H */
