@@ -13,9 +13,19 @@
 /delete-node/ &ipa_fw_mem;
 /delete-node/ &ipa_gsi_mem;
 /delete-node/ &gpu_mem;
+/delete-node/ &tz_mem;
 
 &cont_splash_mem {
 	reg = <0x0 0x9c000000 0x0 (1080 * 2340 * 4)>;
+};
+
+/*
+ * Tucana uses the SM7150-AB SoC.
+ * Limit CPU clock to 2.2 GHz
+ */
+
+&cpu6_opp14 {
+	status = "disabled";
 };
 
 / {
@@ -27,6 +37,15 @@
 	compatible = "xiaomi,tucana", "qcom,sm7150";
 
 	qcom,board-id = <42 0>;
+
+	vreg_touch_vdd: regulator-touch-vdd {
+		compatible = "regulator-fixed";
+		regulator-name = "touch_vdd";
+		startup-delay-us = <4000>;
+		enable-active-high;
+		regulator-boot-on;
+		gpio = <&tlmm 72 0>;
+	};
 
 	reserved-memory {
 		adsp_mem: adsp@95700000 {
@@ -59,6 +78,11 @@
 			no-map;
 		};
 
+		tz_mem: trust-zone@86200000 {
+			reg = <0x0 0x86200000 0x0 0x4900000>;
+			no-map;
+		};
+
 		rmtfs_mem: rmtfs@f2e01000 {
 			compatible = "qcom,rmtfs-mem";
 			reg = <0 0xf2e01000 0 0x200000>;
@@ -67,17 +91,6 @@
 			qcom,client-id = <1>;
 			qcom,vmid = <QCOM_SCM_VMID_MSS_MSA>;
 		};
-	};
-};
-
-&soc {
-	touch_vddio_vreg: fixedregulator@0 {
-		compatible = "regulator-fixed";
-		regulator-name = "disp_vddio_vreg";
-		startup-delay-us = <4000>;
-		enable-active-high;
-		regulator-boot-on;
-		gpio = <&tlmm 72 0>;
 	};
 };
 
@@ -112,7 +125,7 @@
 		pinctrl-0 = <&ts_int_active &ts_reset_active>;
 		pinctrl-1 = <&ts_int_suspend &ts_reset_suspend>;
 		pinctrl-names = "default", "sleep";
-		vdd-supply = <&touch_vddio_vreg>;
+		vdd-supply = <&vreg_touch_vdd>;
 		avdd-supply = <&vreg_l6c_3p0>;
 		fts,regulator_dvdd = "vdd";
 		fts,regulator_avdd = "avdd";
