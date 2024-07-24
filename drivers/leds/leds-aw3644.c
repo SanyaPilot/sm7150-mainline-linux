@@ -34,7 +34,7 @@
 #define AW3644_IOC_MAGIC 'M'
 #define AW3644_PRIVATE_NUM 100
 #define AW3644_LED_NUMS 2
-const char cdev_name[AW3644_LED_NUMS][24] = {"softlight_torch_0","softlight_torch_1"};
+
 struct aw3644_platform_data {
 	int tx_gpio;
 	int torch_gpio;
@@ -107,9 +107,6 @@ typedef struct {
 #define STROBE_EN_SHIFT			(5)
 #define TORCH_PIN_ENABLE_SHIFT		(4)
 #define MODE_BITS_SHIFT			(2)
-#define LED2_ENABLE_SHIFT		(1)
-#define LED1_ENABLE_SHIFT		(0)
-#define TORCH_NUM			(2)
 
 #define STROBE_TYPE_LEVEL_TRIGGER	(0)
 #define STROBE_TYPE_EDGE_TRIGGER	(1)
@@ -145,10 +142,20 @@ enum aw3644_pinctrl_state {
 	STATE_SUSPEND
 };
 
+struct aw3644_led {
+	struct aw3644_chip_data *chip;
+	struct led_classdev cdev;
+	u32 num;
+	u8 brightness;
+};
+
 struct aw3644_chip_data {
 	struct device *dev;
+	struct i2c_client *client;
 
-	struct led_classdev cdev_torch[AW3644_LED_NUMS];
+	int num_leds;
+
+	struct aw3644_led torch_leds[AW3644_LED_NUMS];
 	struct led_classdev cdev_ir;
 	struct cdev cdev;
 	struct class *chr_class;
@@ -156,11 +163,8 @@ struct aw3644_chip_data {
 
 	dev_t dev_num;
 
-	u8 br_torch[TORCH_NUM];
-	u8 led_enable[TORCH_NUM];
 	u8 br_ir;
 	bool powerup_status;
-	u8 led_index;
 	struct aw3644_platform_data *pdata;
 	struct regmap *regmap;
 	struct mutex lock;
@@ -240,18 +244,28 @@ static int aw3644_enable_pass_mode(struct aw3644_chip_data *chip)
 	return ret;
 }
 
+static bool aw3644_needs_suspend(struct aw3644_chip_data *chip)
+{
+	int i;
+	bool ret = true;
+	for (i = 0; i < AW3644_LED_NUMS; i++) {
+		ret = chip->torch_leds[i].brightness == 0;
+		if (!ret) {
+			break;
+		}
+	}
+	return ret;
+}
 
 /* chip control */
 static int aw3644_control(struct aw3644_chip_data *chip,
 			  u8 brightness, enum aw3644_mode opmode)
 {
-	int ret = -1;
-	int val;
-        int i = 0;
-	if(chip->powerup_status == false)
-	{
-	dev_err(chip->dev, "device not power up\n");
-	goto out;
+	int ret = -1, val, i;
+	struct aw3644_led *led;
+	if (chip->powerup_status == false) {
+		dev_err(chip->dev, "device not power up\n");
+		goto out;
 	}
 	ret = regmap_read(chip->regmap, REG_FLAG1, &chip->last_flag1);
 	if (ret < 0) {
@@ -272,7 +286,7 @@ static int aw3644_control(struct aw3644_chip_data *chip,
 		__func__, brightness, opmode);
 
 	/* brightness 0 means off-state */
-	if ((!chip->br_torch[0]) && (!chip->br_torch[1]))
+	if (aw3644_needs_suspend(chip))
 		opmode = MODES_STANDBY;
 
 	if (opmode == MODES_FLASH) {
@@ -292,15 +306,11 @@ static int aw3644_control(struct aw3644_chip_data *chip,
 	}
 
 	if (opmode != MODES_STANDBY) {
-		for (i = 0; i < TORCH_NUM; i++) {
-			if (chip->br_torch[i]) {
-				chip->led_enable[i] = 1;
-		} else {
-			chip->led_enable[i] = 0;
+		val = (opmode << MODE_BITS_SHIFT);
+		for (i = 0; i < AW3644_LED_NUMS; i++) {
+			led = &chip->torch_leds[i];
+			val |= (led->brightness != 0) << led->num;
 		}
-	}
-	val = (opmode << MODE_BITS_SHIFT) | (chip->led_enable[LED2_ENABLE_SHIFT] << LED2_ENABLE_SHIFT)
-				|(chip->led_enable[LED1_ENABLE_SHIFT]  << LED1_ENABLE_SHIFT) ;
 	}
 
 	switch (opmode) {
@@ -388,35 +398,25 @@ out:
 static int aw3644_torch_brightness_set(struct led_classdev *cdev,
 					enum led_brightness brightness)
 {
-	struct aw3644_chip_data *chip = NULL;
+	struct aw3644_led *led = container_of(cdev, struct aw3644_led, cdev);
 	int ret = -1;
-	int index = -1;
-	if (!strncmp(cdev->name, "softlight_torch_0", strlen("softlight_torch_0"))) {
-		chip = container_of(cdev, struct aw3644_chip_data, cdev_torch[0]);
-		index = 0;
-	} else if (!strncmp(cdev->name, "softlight_torch_1", strlen("softlight_torch_1"))) {
-		chip = container_of(cdev, struct aw3644_chip_data, cdev_torch[1]);
-		index = 1;
-	} else {
-		dev_err(chip->dev, "invalid led dev name\n");
-		return ret;
-	}
-	mutex_lock(&chip->lock);
-	chip->led_index = index;
-	if (chip->powerup_status == false) {
-	    ret = aw3644_chip_powerup(chip, 1);
+
+	mutex_lock(&led->chip->lock);
+	if (led->chip->powerup_status == false) {
+	    ret = aw3644_chip_powerup(led->chip, 1);
 	    if (ret == 0)
-	    chip->powerup_status = true;
+	    led->chip->powerup_status = true;
 	}
 
-	chip->br_torch[chip->led_index] = brightness;
-	ret = aw3644_control(chip, brightness, MODES_TORCH);
-	if ((chip->br_torch[0] == 0) && (chip->br_torch[1] == 0)) {
-		ret = aw3644_chip_powerup(chip, 0);
+	led->brightness = brightness;
+	ret = aw3644_control(led->chip, brightness, MODES_TORCH);
+	
+	if (aw3644_needs_suspend(led->chip)) {
+		ret = aw3644_chip_powerup(led->chip, 0);
 		if (ret == 0)
-		chip->powerup_status = false;
+		led->chip->powerup_status = false;
 	}
-	mutex_unlock(&chip->lock);
+	mutex_unlock(&led->chip->lock);
 	return ret;
 }
 
@@ -965,6 +965,53 @@ static struct aw3644_platform_data *aw3644_parse_dt(struct i2c_client *client)
 	return pdata;
 }
 
+static int aw3644_parse_leds(struct aw3644_chip_data *chip)
+{
+	struct device_node *np = chip->client->dev.of_node, *child;
+	int count, ret = 0, i = 0;
+	struct aw3644_led *led;
+
+	count = of_get_available_child_count(np);
+	if (!count || count > AW3644_LED_NUMS)
+		return -EINVAL;
+
+	for_each_available_child_of_node(np, child) {
+		struct led_init_data init_data = {};
+		u32 source;
+
+		ret = of_property_read_u32(child, "reg", &source);
+		if (ret != 0 || source >= AW3644_LED_NUMS) {
+			dev_err(&chip->client->dev,
+				"Couldn't read LED address: %d\n", ret);
+			count--;
+			continue;
+		}
+
+		led = &chip->torch_leds[i];
+		led->num = source;
+		led->chip = chip;
+		led->brightness = 0;
+		led->cdev.max_brightness = AW3644_MAX_BRIGHTNESS_VALUE;
+		led->cdev.brightness_set_blocking = aw3644_torch_brightness_set;
+		init_data.fwnode = of_fwnode_handle(child);
+
+		ret = devm_led_classdev_register_ext(&chip->client->dev, &led->cdev, &init_data);
+		if (ret < 0) {
+			of_node_put(child);
+			return ret;
+		}
+		
+		i++;
+	}
+
+	if (!count)
+		return -EINVAL;
+	
+	chip->num_leds = i;
+
+	return 0;
+}
+
 static const struct regmap_config aw3644_regmap = {
 	.reg_bits = 8,
 	.val_bits = 8,
@@ -990,7 +1037,7 @@ static int aw3644_probe(struct i2c_client *client)
 	struct aw3644_chip_data *chip;
 	enum aw3644_pinctrl_state pin_state = STATE_ACTIVE;
 
-	int err,i;
+	int err;
 	if (!i2c_check_functionality(client->adapter, I2C_FUNC_I2C)) {
 		dev_err(&client->dev, "i2c functionality check fail.\n");
 		return -EOPNOTSUPP;
@@ -1000,6 +1047,8 @@ static int aw3644_probe(struct i2c_client *client)
 			sizeof(struct aw3644_chip_data), GFP_KERNEL);
 	if (!chip)
 		return -ENOMEM;
+	
+	chip->client = client;
 
 	if (client->dev.of_node) {
 		pdata = aw3644_parse_dt(client);
@@ -1181,17 +1230,10 @@ static int aw3644_probe(struct i2c_client *client)
 	}
 
 	/* torch mode */
-	for(i = 0;i < AW3644_LED_NUMS;i++)
-	{
-	chip->cdev_torch[i].name = cdev_name[i];
-	chip->cdev_torch[i].max_brightness = AW3644_MAX_BRIGHTNESS_VALUE;
-	chip->cdev_torch[i].brightness_set_blocking = aw3644_torch_brightness_set;
-	err = led_classdev_register((struct device *)
-		&client->dev, &chip->cdev_torch[i]);
+	err = aw3644_parse_leds(chip);
 	if (err < 0) {
-		dev_err(chip->dev, "Failed to register ir torch\n");
+		dev_err(chip->dev, "Failed to register torch LEDs\n");
 		goto err_del_cdev;
-		}
 	}
 	/* ir mode */
 	chip->cdev_ir.name = "ir";
@@ -1204,7 +1246,7 @@ static int aw3644_probe(struct i2c_client *client)
 		&client->dev, &chip->cdev_ir);
 	if (err < 0) {
 		dev_err(chip->dev, "Failed to register ir\n");
-		goto err_free_torch_classdev;
+		goto err_del_cdev;
 	}
 
 	atomic_set(&chip->ito_exception, 0);
@@ -1212,10 +1254,6 @@ static int aw3644_probe(struct i2c_client *client)
 	dev_info(&client->dev, "Exit\n");
 
 	return 0;
-
-err_free_torch_classdev:
-	for(i = 0; i <AW3644_LED_NUMS;i++ )
-	led_classdev_unregister(&chip->cdev_torch[i]);
 
 err_del_cdev:
 	if (&chip->cdev != NULL)
@@ -1269,7 +1307,6 @@ err_free_pwm:
 static void aw3644_remove(struct i2c_client *client)
 {
 	struct aw3644_chip_data *chip = i2c_get_clientdata(client);
-	int i;
 	if (&chip->cdev != NULL)
 		cdev_del(&(chip->cdev));
 
@@ -1283,8 +1320,6 @@ static void aw3644_remove(struct i2c_client *client)
 
 	cancel_work(&chip->ir_stop_work);
 	del_timer(&chip->ir_stop_timer);
-	for(i = 0; i <AW3644_LED_NUMS;i++ )
-	led_classdev_unregister(&chip->cdev_torch[i]);
 	led_classdev_unregister(&chip->cdev_ir);
 	regmap_write(chip->regmap, REG_ENABLE, 0);
 	pwm_put(chip->pwm);
