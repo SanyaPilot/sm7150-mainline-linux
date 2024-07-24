@@ -200,6 +200,38 @@
 	compatible = "xiaomi,f4-41-06-0a";
 };
 
+&pm6150l_flash {
+	status = "okay";
+
+	/* Both LEDs */
+	led-1 {
+		function = LED_FUNCTION_FLASH;
+		color = <LED_COLOR_ID_WHITE>;
+		led-sources = <1 2>;
+		led-max-microamp = <300000>;
+		flash-max-microamp = <2000000>;
+		flash-max-timeout-us = <1280000>;
+	};
+	/* Only first LED */
+	led-2 {
+		function = LED_FUNCTION_FLASH;
+		color = <LED_COLOR_ID_WHITE>;
+		led-sources = <1>;
+		led-max-microamp = <150000>;
+		flash-max-microamp = <1000000>;
+		flash-max-timeout-us = <1280000>;
+	};
+	/* Only second LED */
+	led-3 {
+		function = LED_FUNCTION_FLASH;
+		color = <LED_COLOR_ID_WHITE>;
+		led-sources = <2>;
+		led-max-microamp = <150000>;
+		flash-max-microamp = <1000000>;
+		flash-max-timeout-us = <1280000>;
+	};
+};
+
 &pm6150_gpios {
 	gpio-line-names = "FOD_LDO_EN1", /* GPIO_1 */
 			  "FOD_LDO_EN2",
