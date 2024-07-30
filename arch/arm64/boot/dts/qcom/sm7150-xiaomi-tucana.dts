@@ -6,6 +6,7 @@
 /dts-v1/;
 
 #include "sm7150-xiaomi-common.dtsi"
+#include <dt-bindings/input/ti-drv260x.h>
 
 /delete-node/ &adsp_mem;
 /delete-node/ &wlan_msa_mem;
@@ -113,7 +114,16 @@
 	clock-frequency = <100000>;
 	status = "okay";
 
-	/* ti,drv2605l (haptic) @ 5a */
+	haptics@5a {
+		compatible = "ti,drv2605l";
+		reg = <0x5a>;
+		enable-gpios = <&tlmm 4 GPIO_ACTIVE_HIGH>;
+		mode = <DRV260X_LRA_NO_CAL_MODE>;
+		library-sel = <DRV260X_LIB_LRA>;
+		vib-rated-mv = <3200>;
+		vib-overdrive-mv = <3200>;
+	};
+
 	softlight: aw3644@63 {
 		compatible = "awinic,aw3644";
 		reg = <0x63>;
