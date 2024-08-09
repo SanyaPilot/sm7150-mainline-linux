@@ -598,7 +598,7 @@ static unsigned int aw3644_poll(struct file *filp, poll_table *wait)
 		ret = aw3644_control(chip, LED_OFF, MODES_STANDBY);
 		mutex_unlock(&chip->lock);
 
-		aw3644_ir_stop_timer((unsigned long)chip);
+		aw3644_ir_stop_timer(&chip->ir_stop_timer);
 
 		if (gpio_is_valid(chip->pdata->hwen_gpio)) {
 			ret = gpio_direction_output(chip->pdata->hwen_gpio, 0);
@@ -1256,8 +1256,7 @@ static int aw3644_probe(struct i2c_client *client)
 	return 0;
 
 err_del_cdev:
-	if (&chip->cdev != NULL)
-		cdev_del(&(chip->cdev));
+	cdev_del(&(chip->cdev));
 err_destroy_device:
 	if (chip->chr_dev)
 		device_destroy(chip->chr_class, chip->dev_num);
@@ -1307,8 +1306,7 @@ err_free_pwm:
 static void aw3644_remove(struct i2c_client *client)
 {
 	struct aw3644_chip_data *chip = i2c_get_clientdata(client);
-	if (&chip->cdev != NULL)
-		cdev_del(&(chip->cdev));
+	cdev_del(&(chip->cdev));
 
 	if (chip->chr_dev)
 		device_destroy(chip->chr_class, chip->dev_num);
